@@ -31,7 +31,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="min-h-screen w-64 flex flex-col border-r border-gray-800 bg-gray-900">
+    <aside className="fixed top-0 left-0 h-full w-64 flex flex-col border-r border-gray-800 bg-gray-900">
       {/*Logo*/}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export default function Sidebar() {
             const isActive = pathname === item.href;
 
             return (
-              <li key="item.name">
+              <li key={item.name}>
                 <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 transition-colors duration-200 ${
@@ -70,6 +70,6 @@ export default function Sidebar() {
         <Link href="/auth/login">Login</Link>
         <Link href="/auth/signup">Signup</Link>
       </div>
-    </div>
+    </aside>
   );
 }
