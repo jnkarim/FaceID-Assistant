@@ -42,20 +42,22 @@ export default function Signup() {
           <nav className="flex items-center gap-2">
             <Link
               href="/"
-              className="text-lg text-neutral-400 hover:text-lime-400 transition underline"
+              className="text-lg font-bold text-neutral-400 hover:text-lime-400 transition underline"
             >
               Home
             </Link>
           </nav>
 
-          <h1 className="text-4xl font-bold text-white">Already a member?</h1>
+          <div className="flex flex-row">
+            <h1 className="text-3xl font-bold text-white">Already a member?</h1>
 
-          <Link
-            href="/auth/login"
-            className="text-lime-400 hover:text-lime-300 transition font-medium underline"
-          >
-            Log in
-          </Link>
+            <Link
+              href="/auth/login"
+              className="text-lime-400 hover:text-lime-300 transition font-medium underline"
+            >
+              Log in
+            </Link>
+          </div>
 
           {/*Form*/}
           <form onSubmit={handleSubmit} className="space-y-5">
