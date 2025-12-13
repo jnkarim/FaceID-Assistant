@@ -67,8 +67,8 @@ export default function Sidebar() {
 
       {/*User Section*/}
       <div className="p-4 border-t border-gray-800 flex flex-col items-center gap-4">
-        <Link href="/auth/login">Login</Link>
-        <Link href="/auth/signup">Signup</Link>
+        <Link href="/login">Login</Link>
+        <Link href="/signup">Signup</Link>
       </div>
     </aside>
   );

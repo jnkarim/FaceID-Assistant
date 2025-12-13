@@ -52,7 +52,7 @@ export default function Signup() {
             <h1 className="text-3xl font-bold text-white">Already a member?</h1>
 
             <Link
-              href="/auth/login"
+              href="/login"
               className="text-lime-400 hover:text-lime-300 transition font-medium underline"
             >
               Log in

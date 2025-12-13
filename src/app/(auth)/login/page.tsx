@@ -49,7 +49,7 @@ export default function Login() {
             </h1>
 
             <Link
-              href="/auth/signup"
+              href="/signup"
               className="text-lime-400 hover:text-lime-300 transition font-medium underline"
             >
               Sign up
