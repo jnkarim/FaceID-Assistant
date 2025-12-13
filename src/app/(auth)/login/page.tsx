@@ -79,7 +79,7 @@ export default function Login() {
               placeholder="Email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-6 py-4 text-white bg-black border border-neutral-400 focus:border-lime-400 transition focus:outline-none rounded-lg placeholder-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-4 text-white bg-black border border-neutral-400 focus:border-lime-400 transition focus:outline-none rounded-xl placeholder-white disabled:opacity-50 disabled:cursor-not-allowed"
             />
 
             {/*Password*/}
@@ -90,7 +90,7 @@ export default function Login() {
                 placeholder="********"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full bg-black px-6 py-4 border border-neutral-400 focus:border-lime-400 rounded-lg transition focus:outline-none placeholder-white text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-black px-6 py-4 border border-neutral-400 focus:border-lime-400 rounded-xl transition focus:outline-none placeholder-white text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="button"
