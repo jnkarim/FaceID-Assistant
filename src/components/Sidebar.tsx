@@ -1,7 +1,6 @@
 "use client";
 
 import { Home, Users, MessageSquare, Settings } from "lucide-react";
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -31,7 +30,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed top-0 left-0 h-full w-64 flex flex-col border-r border-gray-800 bg-gray-900">
+    <aside className="fixed top-0 left-0 h-full w-64 flex flex-col border-r border-gray-800 bg-stone-950">
       {/*Logo*/}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center gap-2">
