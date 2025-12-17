@@ -1,9 +1,11 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { Radar } from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface Signup {
   firstName: string;
@@ -21,13 +23,24 @@ export default function Signup() {
     password: "",
   });
 
+  const router = useRouter();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
   };
-  const handleSubmit = () => {};
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post("/api/users/signup", formData);
+      router.push("/login");
+    } catch (error: any) {// eslint-disable-line @typescript-eslint/no-explicit-any
+      console.log("Signup failed", error.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex flex-col ">
