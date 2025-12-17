@@ -1,14 +1,17 @@
 "use client";
 
+import axios from "axios";
 import { Eye, EyeClosed, Radar } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
 export interface Login {
   email: string;
   password: string;
 }
 
 export default function Login() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -22,7 +25,16 @@ export default function Login() {
     });
   };
 
-  const handleSubmit = () => {};
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post("/api/users/login", formData);
+      router.push("./");
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      console.log("Login failed. Try again.", error.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex flex-col ">
