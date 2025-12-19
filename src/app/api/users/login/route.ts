@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
     };
 
-    const token = await jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
+    const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
       expiresIn: "7d",
     });
 
@@ -47,9 +47,14 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
     return response;
   } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        return NextResponse.json({error: error.message}, {status: 500})
-
-    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
