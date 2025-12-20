@@ -1,5 +1,1 @@
-- npx tsx src/lib/mongodb.ts - runs TypeScript files directly without compiling first
-
-- npx: Node Package Execute - runs packages without installing them globally
-
-- tsx: TypeScript Execute - a tool that runs TypeScript files directly
+- User Authentication with NextJS & MongoDB : https://medium.com/@Rushabh_/next-js-demystified-user-authentication-with-nextjs-mongodb-2a0e1e697526
