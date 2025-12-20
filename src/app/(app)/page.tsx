@@ -3,6 +3,8 @@
 import { Camera } from "lucide-react";
 import { useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
+import RegisterPeople from "@/components/RegisterPeople";
+
 
 export default function HomePage() {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -22,13 +24,8 @@ export default function HomePage() {
           </div>
         </div>
         {/*Button*/}
-        <button
-          type="button"
-          onClick={() => console.log("Button to register people")}
-          className="px-8 py-4 bg-lime-400 hover:bg-lime-300 transition rounded-lg text-black font-semibold"
-        >
-          Register People
-        </button>
+       <RegisterPeople onRegistrationComplete={() => console.log("Registration complete")} />
+
       </div>
 
       {/*Camera Content*/}
