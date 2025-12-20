@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //generate token
+    // generate token
     const tokenData = {
       id: user._id,
       firstName: user.firstName,
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
+    // token save in cookie
     response.cookies.set("token", token, {
       httpOnly: true,
       path: "/",
