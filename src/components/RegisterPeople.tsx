@@ -31,7 +31,6 @@ export default function RegisterPeople({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // ✅ FIXED: Added "/" to properly check MIME type
     if (!file.type.startsWith("image/")) {
       setMessage({ type: "error", text: "Please upload an image file" });
       return;
@@ -87,7 +86,8 @@ export default function RegisterPeople({
         return;
       }
 
-      const response = await axios.post("/api/users", {
+      // Changed from /api/users to /api/people
+      const response = await axios.post("/api/users/people", {
         name: userName.trim(),
         descriptor: Array.from(detection.descriptor),
       });
@@ -95,7 +95,7 @@ export default function RegisterPeople({
       // Success
       setMessage({
         type: "success",
-        text: `User "${userName}" registered successfully!`,
+        text: `Person "${userName}" registered successfully!`,
       });
       setUserName("");
       clearImage();
@@ -119,7 +119,7 @@ export default function RegisterPeople({
         className="px-8 py-4 bg-lime-400 hover:bg-lime-300 transition rounded-lg text-black font-semibold flex items-center gap-2"
       >
         <Upload size={20} />
-        Register New User
+        Register New People
       </button>
       {/* Message */}
       {message.text && (
@@ -141,7 +141,7 @@ export default function RegisterPeople({
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-neutral-900 border-2 border-lime-500 rounded-2xl p-8 max-w-md w-full">
             <h2 className="text-2xl font-bold text-white mb-6">
-              Register New User
+              Register New Person
             </h2>
 
             {/* Name Input */}
@@ -170,7 +170,7 @@ export default function RegisterPeople({
                     ref={imageRef}
                     src={selectedImage}
                     alt="Preview"
-                    className="w-full h-64 object-cover rounded-lg"
+                    className="w-full h-auto rounded-lg"
                     crossOrigin="anonymous"
                   />
                   <button
