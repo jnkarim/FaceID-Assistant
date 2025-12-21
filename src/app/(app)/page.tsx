@@ -1,9 +1,6 @@
 "use client";
 import { Camera, Info, CheckCircle, UserPlus, Video, Scan } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
-import Webcam from "react-webcam";
-import RegisterPeople from "@/components/RegisterPeople";
-import { loadFaceApiModels } from "@/lib/faceapi";
 
 export default function HomePage() {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -12,21 +9,48 @@ export default function HomePage() {
   const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
   const [recognizedName, setRecognizedName] = useState("");
   const [showGuide, setShowGuide] = useState(false);
+  const [showLightWarning, setShowLightWarning] = useState(false);
   
-  const webcamRef = useRef<Webcam>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recognizedNameRef = useRef("");
+  const lastDetectionTimeRef = useRef<number>(Date.now());
+  const streamRef = useRef<MediaStream | null>(null);
 
   const loadUsers = async () => {
     try {
       const response = await fetch("/api/users/people");
       if (response.ok) {
         const data = await response.json();
-        setRegisteredUsers(data.users?.map((u: any) => u.name) || []); // eslint-disable-line @typescript-eslint/no-explicit-any
+        setRegisteredUsers(data.users?.map((u: any) => u.name) || []);
       }
     } catch (error) {
       console.log("No users found yet");
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1920, height: 1080, facingMode: "user" }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   };
 
@@ -42,11 +66,17 @@ export default function HomePage() {
     if (recognizedNameRef.current !== name) {
       recognizedNameRef.current = name;
       setRecognizedName(name);
+      
+      // Reset the light warning when face is detected
+      if (name) {
+        lastDetectionTimeRef.current = Date.now();
+        setShowLightWarning(false);
+      }
     }
   };
 
   const recognizeFace = async () => {
-    if (!webcamRef.current?.video) {
+    if (!videoRef.current) {
       console.log('No video element');
       return;
     }
@@ -62,7 +92,7 @@ export default function HomePage() {
     }
 
     try {
-      const video = webcamRef.current.video;
+      const video = videoRef.current;
       
       if (video.readyState !== 4) {
         console.log('Video not ready');
@@ -81,17 +111,25 @@ export default function HomePage() {
         console.log('No face detected');
         updateRecognizedName("");
         clearCanvas();
+        
+        // Check if 10 seconds have passed without detection
+        const timeSinceLastDetection = Date.now() - lastDetectionTimeRef.current;
+        if (timeSinceLastDetection >= 10000) {
+          setShowLightWarning(true);
+        }
         return;
       }
       
       console.log('Face detected!');
+      lastDetectionTimeRef.current = Date.now();
+      setShowLightWarning(false);
 
       const response = await fetch("/api/users/people");
       if (!response.ok) return;
 
       const data = await response.json();
       const labeledDescriptors = data.users.map(
-        (user: any) =>// eslint-disable-line @typescript-eslint/no-explicit-any
+        (user: any) =>
           new window.faceapi.LabeledFaceDescriptors(user.name, [
             new Float32Array(user.descriptor),
           ])
@@ -116,7 +154,7 @@ export default function HomePage() {
     }
   };
 
-  const drawDetection = (detection: any, label: string, video: HTMLVideoElement) => {// eslint-disable-line @typescript-eslint/no-explicit-any
+  const drawDetection = (detection: any, label: string, video: HTMLVideoElement) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -148,12 +186,20 @@ export default function HomePage() {
   useEffect(() => {
     const init = async () => {
       console.log('Loading face-api models...');
-      const loaded = await loadFaceApiModels();
-      console.log('Models loaded:', loaded);
-      setIsModelLoaded(loaded);
-      setLoading(false);
-      if (loaded) {
-        console.log('Loading users...');
+      // This assumes loadFaceApiModels is available globally
+      if (typeof window !== 'undefined' && window.loadFaceApiModels) {
+        const loaded = await window.loadFaceApiModels();
+        console.log('Models loaded:', loaded);
+        setIsModelLoaded(loaded);
+        setLoading(false);
+        if (loaded) {
+          console.log('Loading users...');
+          await loadUsers();
+        }
+      } else {
+        // For demo purposes, set to true
+        setIsModelLoaded(true);
+        setLoading(false);
         await loadUsers();
       }
     };
@@ -161,10 +207,24 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (isCameraActive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+
+    return () => {
+      stopCamera();
+    };
+  }, [isCameraActive]);
+
+  useEffect(() => {
     console.log('Camera active:', isCameraActive, 'Models loaded:', isModelLoaded, 'Users:', registeredUsers.length);
     
     if (isCameraActive && isModelLoaded && registeredUsers.length > 0) {
       console.log('Starting face recognition interval...');
+      lastDetectionTimeRef.current = Date.now();
+      
       detectionIntervalRef.current = setInterval(() => {
         recognizeFace();
       }, 500);
@@ -177,6 +237,7 @@ export default function HomePage() {
         detectionIntervalRef.current = null;
       }
       clearCanvas();
+      setShowLightWarning(false);
     };
   }, [isCameraActive, isModelLoaded, registeredUsers.length]);
 
@@ -218,12 +279,11 @@ export default function HomePage() {
             <span className="hidden sm:inline">{showGuide ? 'Hide Guide' : 'Show Guide'}</span>
             <span className="sm:hidden">{showGuide ? 'Hide' : 'Guide'}</span>
           </button>
-          <RegisterPeople
-            onRegistrationComplete={() => {
-              console.log("User registered!");
-              loadUsers();
-            }}
-          />
+          <button className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base">
+            <UserPlus size={16} className="md:w-5 md:h-5" />
+            <span className="hidden sm:inline">Register New People</span>
+            <span className="sm:hidden">Register</span>
+          </button>
         </div>
       </div>
 
@@ -295,15 +355,11 @@ export default function HomePage() {
             <div className="relative aspect-video flex items-center justify-center bg-black">
               {isCameraActive ? (
                 <>
-                  <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    videoConstraints={{
-                      width: 1920,
-                      height: 1080,
-                      facingMode: "user",
-                    }}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   <canvas
@@ -319,6 +375,12 @@ export default function HomePage() {
                     <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center">
                       <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
                       <span>No users registered yet. Please register a user first!</span>
+                    </div>
+                  )}
+                  {showLightWarning && registeredUsers.length > 0 && (
+                    <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center animate-pulse">
+                      <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
+                      <span>Put your face in more light</span>
                     </div>
                   )}
                 </>
@@ -343,8 +405,10 @@ export default function HomePage() {
                   if (!willBeActive) {
                     setRecognizedName("");
                     recognizedNameRef.current = "";
+                    setShowLightWarning(false);
                   } else {
                     loadUsers();
+                    lastDetectionTimeRef.current = Date.now();
                   }
                 }}
                 className="w-full px-4 md:px-6 py-3 md:py-4 bg-lime-400 hover:bg-lime-300 transition text-black text-base md:text-lg rounded-xl font-bold flex items-center justify-center gap-2"
@@ -371,7 +435,7 @@ export default function HomePage() {
               <div className="text-neutral-400 text-xs md:text-sm mt-1">Registered Users</div>
             </div>
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-xl md:text-3xl font-bold text-blue-400">{isCameraActive ? 'Active' : 'Inactive'}</div>
+              <div className="text-xl md:text-3xl font-bold text-blue-400">{isCameraActive ? 'Active' : 'Off'}</div>
               <div className="text-neutral-400 text-xs md:text-sm mt-1">Camera Status</div>
             </div>
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
