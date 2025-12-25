@@ -1,12 +1,20 @@
 "use client";
 
-import { Camera, Info, CheckCircle, UserPlus, Video, Scan } from "lucide-react";
+import {
+  Camera,
+  Info,
+  CheckCircle,
+  UserPlus,
+  Video,
+  Scan,
+  RefreshCw,
+} from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { loadFaceApiModels } from "@/lib/faceapi";
 
 declare global {
   interface Window {
-    faceapi: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    faceapi: any;
   }
 }
 
@@ -18,8 +26,10 @@ export default function HomePage() {
   const [recognizedName, setRecognizedName] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [showLightWarning, setShowLightWarning] = useState(false);
-  const [cameraFacingMode, setCameraFacingMode] =
-    useState<"user" | "environment">("environment");
+  const [cameraFacingMode, setCameraFacingMode] = useState<
+    "user" | "environment"
+  >("environment");
+  const [cameraError, setCameraError] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,7 +43,7 @@ export default function HomePage() {
       const response = await fetch("/api/users/people");
       if (response.ok) {
         const data = await response.json();
-        setRegisteredUsers(data.users?.map((u: any) => u.name) || []); // eslint-disable-line @typescript-eslint/no-explicit-any
+        setRegisteredUsers(data.users?.map((u: any) => u.name) || []);
       }
     } catch (error) {
       console.log("No users found yet");
@@ -41,20 +51,64 @@ export default function HomePage() {
   };
 
   const startCamera = async () => {
+    setCameraError("");
+
     try {
+      // Try with exact facingMode first
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: 1920,
-          height: 1080,
-          facingMode: { ideal: cameraFacingMode }, // front/back based on state
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          facingMode: { exact: cameraFacingMode },
         },
       });
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
       }
     } catch (error) {
-      console.error("Error accessing camera:", error);
+      console.error("Error with exact facingMode:", error);
+
+      // Fallback: try with ideal facingMode
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            facingMode: { ideal: cameraFacingMode },
+          },
+        });
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+        }
+      } catch (fallbackError) {
+        console.error("Error with ideal facingMode:", fallbackError);
+
+        // Final fallback: try without facingMode
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+          });
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            streamRef.current = stream;
+          }
+          setCameraError(
+            "Using default camera (device may have only one camera)"
+          );
+        } catch (finalError) {
+          console.error("All camera access attempts failed:", finalError);
+          setCameraError("Unable to access camera. Please check permissions.");
+          setIsCameraActive(false);
+        }
+      }
     }
   };
 
@@ -119,7 +173,8 @@ export default function HomePage() {
         updateRecognizedName("");
         clearCanvas();
 
-        const timeSinceLastDetection = Date.now() - lastDetectionTimeRef.current;
+        const timeSinceLastDetection =
+          Date.now() - lastDetectionTimeRef.current;
         if (timeSinceLastDetection >= 10000) {
           setShowLightWarning(true);
         }
@@ -142,7 +197,10 @@ export default function HomePage() {
 
       if (labeledDescriptors.length === 0) return;
 
-      const faceMatcher = new window.faceapi.FaceMatcher(labeledDescriptors, 0.6);
+      const faceMatcher = new window.faceapi.FaceMatcher(
+        labeledDescriptors,
+        0.6
+      );
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
       if (bestMatch.label !== "unknown") {
@@ -157,7 +215,11 @@ export default function HomePage() {
     }
   };
 
-  const drawDetection = (detection: any, label: string, video: HTMLVideoElement) => {
+  const drawDetection = (
+    detection: any,
+    label: string,
+    video: HTMLVideoElement
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -166,7 +228,10 @@ export default function HomePage() {
     canvas.height = displaySize.height;
 
     window.faceapi.matchDimensions(canvas, displaySize);
-    const resizedDetection = window.faceapi.resizeResults(detection, displaySize);
+    const resizedDetection = window.faceapi.resizeResults(
+      detection,
+      displaySize
+    );
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -184,6 +249,19 @@ export default function HomePage() {
     ctx.fillRect(box.x, box.y - 35, textWidth + 20, 35);
     ctx.fillStyle = "black";
     ctx.fillText(label, box.x + 10, box.y - 10);
+  };
+
+  const handleCameraToggle = async () => {
+    if (isCameraActive) {
+      stopCamera();
+      setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+      setRecognizedName("");
+      recognizedNameRef.current = "";
+      setShowLightWarning(false);
+      setCameraError("");
+    } else {
+      setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+    }
   };
 
   useEffect(() => {
@@ -257,8 +335,12 @@ export default function HomePage() {
       {/* Header */}
       <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 border-b pb-4 md:pb-6 border-neutral-700 gap-4">
         <div className="flex flex-col items-start">
-          <div className="text-2xl md:text-3xl text-white font-semibold">FaceID Assistant</div>
-          <div className="text-base md:text-lg text-neutral-400">Smart Recognition System</div>
+          <div className="text-2xl md:text-3xl text-white font-semibold">
+            FaceID Assistant
+          </div>
+          <div className="text-base md:text-lg text-neutral-400">
+            Smart Recognition System
+          </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           <button
@@ -266,19 +348,23 @@ export default function HomePage() {
             className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base"
           >
             <Info size={16} className="md:w-5 md:h-5" />
-            <span className="hidden sm:inline">{showGuide ? "Hide Guide" : "Show Guide"}</span>
+            <span className="hidden sm:inline">
+              {showGuide ? "Hide Guide" : "Show Guide"}
+            </span>
             <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
           </button>
 
-          {/* Mobile-only camera toggle */}
+          {/* Mobile camera switch button */}
           <button
             type="button"
-            onClick={() =>
-              setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"))
-            }
+            onClick={handleCameraToggle}
             className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden"
+            disabled={isCameraActive}
           >
-            {cameraFacingMode === "user" ? "Use Back Camera" : "Use Front Camera"}
+            <RefreshCw size={16} />
+            <span>
+              {cameraFacingMode === "user" ? "Front Cam" : "Back Cam"}
+            </span>
           </button>
 
           <button className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base">
@@ -319,7 +405,8 @@ export default function HomePage() {
                   Register Users
                 </h4>
                 <p className="text-neutral-400 text-xs md:text-sm">
-                  Click {"Register New People"} button, enter a name, and capture your face.
+                  Click Register New People button, enter a name, and capture
+                  your face.
                 </p>
               </div>
 
@@ -334,7 +421,8 @@ export default function HomePage() {
                   Start Camera
                 </h4>
                 <p className="text-neutral-400 text-xs md:text-sm">
-                  Click {"Start Camera"} to activate the webcam. Ensure good lighting.
+                  Click Start Camera to activate the webcam. Ensure good
+                  lighting.
                 </p>
               </div>
 
@@ -349,7 +437,8 @@ export default function HomePage() {
                   Get Recognized
                 </h4>
                 <p className="text-neutral-400 text-xs md:text-sm">
-                  Look at the camera and the system will automatically identify registered users.
+                  Look at the camera and the system will automatically identify
+                  registered users.
                 </p>
               </div>
             </div>
@@ -358,9 +447,11 @@ export default function HomePage() {
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-lime-400 flex-shrink-0 mt-0.5" />
                 <div className="text-xs md:text-sm text-neutral-300">
-                  <span className="font-semibold text-white">Pro Tips:</span> Use good
-                  lighting, face the camera directly, and stay 2-3 feet away for optimal
-                  recognition. Green box = recognized user, Red box = unknown person.
+                  <span className="font-semibold text-white">Pro Tips:</span>{" "}
+                  Use good lighting, face the camera directly, and stay 2-3 feet
+                  away for optimal recognition. Green box = recognized user, Red
+                  box = unknown person. On mobile, switch cameras before
+                  starting.
                 </div>
               </div>
             </div>
@@ -391,10 +482,17 @@ export default function HomePage() {
                       {recognizedName}
                     </div>
                   )}
+                  {cameraError && (
+                    <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm max-w-[200px]">
+                      {cameraError}
+                    </div>
+                  )}
                   {registeredUsers.length === 0 && (
                     <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center">
                       <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
-                      <span>No users registered yet. Please register a user first!</span>
+                      <span>
+                        No users registered yet. Please register a user first!
+                      </span>
                     </div>
                   )}
                   {showLightWarning && registeredUsers.length > 0 && (
@@ -414,7 +512,7 @@ export default function HomePage() {
                       Camera Inactive
                     </div>
                     <p className="text-neutral-500 text-xs md:text-sm">
-                      Click {"Start Camera"} to begin face recognition
+                      Click Start Camera to begin face recognition
                     </p>
                   </div>
                 </div>
@@ -430,6 +528,7 @@ export default function HomePage() {
                     setRecognizedName("");
                     recognizedNameRef.current = "";
                     setShowLightWarning(false);
+                    setCameraError("");
                   } else {
                     loadUsers();
                     lastDetectionTimeRef.current = Date.now();
