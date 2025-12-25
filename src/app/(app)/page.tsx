@@ -276,7 +276,7 @@ export default function HomePage() {
             onClick={() =>
               setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"))
             }
-            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base sm:hidden"
+            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden"
           >
             {cameraFacingMode === "user" ? "Use Back Camera" : "Use Front Camera"}
           </button>
