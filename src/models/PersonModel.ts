@@ -12,26 +12,23 @@ const personSchema = new mongoose.Schema(
       type: [Number],
       required: [true, "Please provide a face descriptor"],
       validate: {
-        validator: function(arr: number[]) {
+        validator: function (arr: number[]) {
           return arr.length === 128;
         },
-        message: "Descriptor must contain exactly 128 numbers"
-      }
+        message: "Descriptor must contain exactly 128 numbers",
+      },
     },
+    //Relationship between two models
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // Optional: if you want to associate faces with users
-    }
+      required: true,
+    },
   },
   {
     timestamps: true,
   }
 );
-
-
-personSchema.index({ name: 1 });
-personSchema.index({ userId: 1 });
 
 const Person = mongoose.models.Person || mongoose.model("Person", personSchema);
 
