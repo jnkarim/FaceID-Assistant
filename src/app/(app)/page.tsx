@@ -18,6 +18,8 @@ export default function HomePage() {
   const [recognizedName, setRecognizedName] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [showLightWarning, setShowLightWarning] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<"user" | "environment">("environment");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,7 +43,11 @@ export default function HomePage() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1920, height: 1080, facingMode: { ideal: "environment" } },
+        video: {
+          width: 1920,
+          height: 1080,
+          facingMode: { ideal: cameraFacingMode }, // front/back based on state
+        },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -85,6 +91,7 @@ export default function HomePage() {
   const recognizeFace = async () => {
     if (!videoRef.current) return;
     if (registeredUsers.length === 0) return;
+
     if (!window.faceapi) {
       console.error("face-api not loaded!");
       return;
@@ -92,7 +99,10 @@ export default function HomePage() {
 
     try {
       const video = videoRef.current;
-      if (video.readyState !== 4) return;
+
+      if (video.readyState !== 4) {
+        return;
+      }
 
       const detection = await window.faceapi
         .detectSingleFace(
@@ -200,11 +210,12 @@ export default function HomePage() {
     return () => {
       stopCamera();
     };
-  }, [isCameraActive]);
+  }, [isCameraActive, cameraFacingMode]);
 
   useEffect(() => {
     if (isCameraActive && isModelLoaded && registeredUsers.length > 0) {
       lastDetectionTimeRef.current = Date.now();
+
       detectionIntervalRef.current = setInterval(() => {
         recognizeFace();
       }, 500);
@@ -255,9 +266,21 @@ export default function HomePage() {
             className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base"
           >
             <Info size={16} className="md:w-5 md:h-5" />
-            <span className="hidden sm:inline">{showGuide ? 'Hide Guide' : 'Show Guide'}</span>
-            <span className="sm:hidden">{showGuide ? 'Hide' : 'Guide'}</span>
+            <span className="hidden sm:inline">{showGuide ? "Hide Guide" : "Show Guide"}</span>
+            <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
           </button>
+
+          {/* Mobile-only camera toggle */}
+          <button
+            type="button"
+            onClick={() =>
+              setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"))
+            }
+            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base sm:hidden"
+          >
+            {cameraFacingMode === "user" ? "Use Back Camera" : "Use Front Camera"}
+          </button>
+
           <button className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base">
             <UserPlus size={16} className="md:w-5 md:h-5" />
             <span className="hidden sm:inline">Register New People</span>
@@ -266,7 +289,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Interactive Guide */}
+      {/* Guide */}
       {showGuide && (
         <div className="max-w-4xl mx-auto mb-6 md:mb-8 w-full">
           <div className="bg-black border-2 border-lime-400/30 rounded-2xl p-4 md:p-6">
@@ -275,11 +298,15 @@ export default function HomePage() {
                 <Info className="w-4 h-4 md:w-5 md:h-5 text-black" />
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2">How to Use FaceID Assistant</h3>
-                <p className="text-sm md:text-base text-neutral-300 mb-4">Follow these simple steps to get started with face recognition</p>
+                <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                  How to Use FaceID Assistant
+                </h3>
+                <p className="text-sm md:text-base text-neutral-300 mb-4">
+                  Follow these simple steps to get started with face recognition
+                </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
                 <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
@@ -288,8 +315,12 @@ export default function HomePage() {
                   </div>
                   <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
                 </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">Register Users</h4>
-                <p className="text-neutral-400 text-xs md:text-sm">Click {"Register New People"} button, enter a name, and capture your face.</p>
+                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                  Register Users
+                </h4>
+                <p className="text-neutral-400 text-xs md:text-sm">
+                  Click {"Register New People"} button, enter a name, and capture your face.
+                </p>
               </div>
 
               <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
@@ -299,8 +330,12 @@ export default function HomePage() {
                   </div>
                   <Video className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
                 </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">Start Camera</h4>
-                <p className="text-neutral-400 text-xs md:text-sm">Click {"Start Camera"} to activate the webcam. Ensure good lighting.</p>
+                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                  Start Camera
+                </h4>
+                <p className="text-neutral-400 text-xs md:text-sm">
+                  Click {"Start Camera"} to activate the webcam. Ensure good lighting.
+                </p>
               </div>
 
               <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
@@ -310,8 +345,12 @@ export default function HomePage() {
                   </div>
                   <Scan className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
                 </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">Get Recognized</h4>
-                <p className="text-neutral-400 text-xs md:text-sm">Look at the camera and the system will automatically identify registered users.</p>
+                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                  Get Recognized
+                </h4>
+                <p className="text-neutral-400 text-xs md:text-sm">
+                  Look at the camera and the system will automatically identify registered users.
+                </p>
               </div>
             </div>
 
@@ -319,7 +358,9 @@ export default function HomePage() {
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-lime-400 flex-shrink-0 mt-0.5" />
                 <div className="text-xs md:text-sm text-neutral-300">
-                  <span className="font-semibold text-white">Pro Tips:</span> Use good lighting, face the camera directly, and stay 2-3 feet away for optimal recognition. Green box = recognized user, Red box = unknown person.
+                  <span className="font-semibold text-white">Pro Tips:</span> Use good
+                  lighting, face the camera directly, and stay 2-3 feet away for optimal
+                  recognition. Green box = recognized user, Red box = unknown person.
                 </div>
               </div>
             </div>
@@ -331,7 +372,7 @@ export default function HomePage() {
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto">
           <div className="bg-stone-950 border-2 border-black rounded-2xl overflow-hidden mb-6 md:mb-8">
-            <div className="relative aspect-video flex items-center justify-center bg-black">
+            <div className="relative bg-black flex items-center justify-center h-[70vh] sm:aspect-video">
               {isCameraActive ? (
                 <>
                   <video
@@ -369,8 +410,12 @@ export default function HomePage() {
                     <Camera className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
                   </div>
                   <div className="text-center">
-                    <div className="text-neutral-400 text-lg md:text-xl mb-2">Camera Inactive</div>
-                    <p className="text-neutral-500 text-xs md:text-sm">Click {"Start Camera"} to begin face recognition</p>
+                    <div className="text-neutral-400 text-lg md:text-xl mb-2">
+                      Camera Inactive
+                    </div>
+                    <p className="text-neutral-500 text-xs md:text-sm">
+                      Click {"Start Camera"} to begin face recognition
+                    </p>
                   </div>
                 </div>
               )}
@@ -410,16 +455,28 @@ export default function HomePage() {
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6 md:mb-8">
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-2xl md:text-3xl font-bold text-lime-400">{registeredUsers.length}</div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">Registered Users</div>
+              <div className="text-2xl md:text-3xl font-bold text-lime-400">
+                {registeredUsers.length}
+              </div>
+              <div className="text-neutral-400 text-xs md:text-sm mt-1">
+                Registered Users
+              </div>
             </div>
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-xl md:text-3xl font-bold text-blue-400">{isCameraActive ? 'Active' : 'Off'}</div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">Camera Status</div>
+              <div className="text-xl md:text-3xl font-bold text-blue-400">
+                {isCameraActive ? "Active" : "Off"}
+              </div>
+              <div className="text-neutral-400 text-xs md:text-sm mt-1">
+                Camera Status
+              </div>
             </div>
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-2xl md:text-3xl font-bold text-purple-400">{recognizedName ? '✓' : '—'}</div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">Detection Status</div>
+              <div className="text-2xl md:text-3xl font-bold text-purple-400">
+                {recognizedName ? "✓" : "—"}
+              </div>
+              <div className="text-neutral-400 text-xs md:text-sm mt-1">
+                Detection Status
+              </div>
             </div>
           </div>
         </div>
