@@ -51,7 +51,7 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-4">
           <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <Radar className="w-5 h-5 sm:w-6 sm:h-6 text-lime-400" />
           <div className="text-white text-base sm:text-lg lg:text-xl font-bold">
             FaceID
@@ -64,7 +64,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 mt-4">
           <ul className="space-y-2">
             {navigation.map((item) => {
               const isActive = pathname === item.href;

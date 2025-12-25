@@ -1,12 +1,16 @@
 import { connect } from "@/dbConfig/dbConfig";
 import Person from "@/models/PersonModel";
 import { NextRequest, NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 
 connect();
 
-// POST - Register a new person with face descriptor
 export async function POST(request: NextRequest) {
   try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json();
     const { name, descriptor } = body;
 
@@ -28,14 +32,16 @@ export async function POST(request: NextRequest) {
     // Check if descriptor has correct length (128 numbers)
     if (descriptor.length !== 128) {
       return NextResponse.json(
-        { error: `Invalid descriptor length. Expected 128, got ${descriptor.length}` },
+        {
+          error: `Invalid descriptor length. Expected 128, got ${descriptor.length}`,
+        },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
     const existingPerson = await Person.findOne({
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+      userId: user.id,
+      name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
     });
 
     if (existingPerson) {
@@ -49,6 +55,7 @@ export async function POST(request: NextRequest) {
     const newPerson = new Person({
       name: name.trim(),
       descriptor,
+      userId: user.id,
     });
 
     await newPerson.save();
@@ -61,16 +68,16 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Person registered successfully",
-        person: { 
+        person: {
           id: newPerson._id,
-          name: newPerson.name 
+          name: newPerson.name,
         },
       },
       { status: 201 }
     );
   } catch (error: any) {// eslint-disable-line @typescript-eslint/no-explicit-any
     console.error("Registration error:", error);
-    
+
     if (error.code === 11000) {
       return NextResponse.json(
         { error: "Person with this name already exists" },
@@ -85,11 +92,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Fetch all registered persons
 export async function GET(request: NextRequest) {
   try {
-    const persons = await Person.find({}).select('name descriptor createdAt').lean();
-    
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const persons = await Person.find({ userId: user.id })
+      .select("name descriptor createdAt")
+      .lean();
+
     console.log(`Fetching persons. Total: ${persons.length}`);
 
     return NextResponse.json(
@@ -111,11 +124,18 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  console.log("LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
+
 }
 
 // DELETE - Remove a person by name
 export async function DELETE(request: NextRequest) {
   try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const name = searchParams.get("name");
 
@@ -127,14 +147,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     const deletedPerson = await Person.findOneAndDelete({
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+      userId: user.id,
+      name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
     });
 
     if (!deletedPerson) {
-      return NextResponse.json(
-        { error: "Person not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Person not found" }, { status: 404 });
     }
 
     console.log(`Person deleted: ${name}`);

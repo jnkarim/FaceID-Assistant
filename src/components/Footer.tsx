@@ -20,7 +20,7 @@ export default function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/jnkarim"
               target="_blank"
               rel="noopener noreferrer"
               className="text-neutral-400 hover:text-lime-400 transition"
@@ -29,7 +29,7 @@ export default function Footer() {
               <Github size={20} />
             </a>
             <a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/jnkarim/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-neutral-400 hover:text-lime-400 transition"
@@ -38,7 +38,7 @@ export default function Footer() {
               <Linkedin size={20} />
             </a>
             <a
-              href="mailto:contact@faceid.com"
+              href="mailto:julkernkarim@gmail.com"
               className="text-neutral-400 hover:text-lime-400 transition"
               aria-label="Email"
             >

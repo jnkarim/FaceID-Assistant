@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import axios from "axios";
+import { loadFaceApiModels } from "@/lib/faceapi";
 
 declare global {
   interface Window {
@@ -66,13 +67,28 @@ export default function RegisterPeople({
     }
 
     setIsProcessing(true);
+    setMessage({ type: "info", text: "Loading face recognition models..." });
+
+    // 1) Ensure face-api models are loaded
+    const modelsOk = await loadFaceApiModels();
+    if (!modelsOk) {
+      setIsProcessing(false);
+      setMessage({
+        type: "error",
+        text: "Failed to load face recognition models. Please reload the page.",
+      });
+      return;
+    }
+
     setMessage({ type: "info", text: "Detecting face in photo..." });
 
     try {
-      const detection = await window.faceapi
+      const faceapi = window.faceapi;
+
+      const detection = await faceapi
         .detectSingleFace(
           imageRef.current,
-          new window.faceapi.TinyFaceDetectorOptions()
+          new faceapi.TinyFaceDetectorOptions()
         )
         .withFaceLandmarks()
         .withFaceDescriptor();
@@ -86,13 +102,12 @@ export default function RegisterPeople({
         return;
       }
 
-      // Changed from /api/users to /api/people
-      const response = await axios.post("/api/users/people", {
+      // POST to per-user people API
+      await axios.post("/api/users/people", {
         name: userName.trim(),
         descriptor: Array.from(detection.descriptor),
       });
 
-      // Success
       setMessage({
         type: "success",
         text: `Person "${userName}" registered successfully!`,
@@ -121,6 +136,7 @@ export default function RegisterPeople({
         <Upload size={20} />
         Register New People
       </button>
+
       {/* Message */}
       {message.text && (
         <div
@@ -162,7 +178,9 @@ export default function RegisterPeople({
                 >
                   <Upload className="w-12 h-12 text-neutral-500 mx-auto mb-3" />
                   <p className="text-neutral-400 mb-1">Click to upload photo</p>
-                  <p className="text-neutral-600 text-sm">JPG, PNG (Max 5MB)</p>
+                  <p className="text-neutral-600 text-sm">
+                    JPG, PNG (Max 5MB)
+                  </p>
                 </div>
               ) : (
                 <div className="relative">

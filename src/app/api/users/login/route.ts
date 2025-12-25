@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
       expiresIn: "7d",
     });
+    console.log("LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
+
 
     const response = NextResponse.json({
       message: "Login successful",
