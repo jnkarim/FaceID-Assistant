@@ -30,6 +30,7 @@ export default function HomePage() {
     "user" | "environment"
   >("environment");
   const [cameraError, setCameraError] = useState("");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,16 +51,22 @@ export default function HomePage() {
     }
   };
 
-  const startCamera = async () => {
+  const startCamera = async (facingMode: "user" | "environment") => {
     setCameraError("");
 
     try {
+      // Stop existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+
       // Try with exact facingMode first
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          facingMode: { exact: cameraFacingMode },
+          facingMode: { exact: facingMode },
         },
       });
 
@@ -76,7 +83,7 @@ export default function HomePage() {
           video: {
             width: { ideal: 1920 },
             height: { ideal: 1080 },
-            facingMode: { ideal: cameraFacingMode },
+            facingMode: { ideal: facingMode },
           },
         });
 
@@ -251,17 +258,23 @@ export default function HomePage() {
     ctx.fillText(label, box.x + 10, box.y - 10);
   };
 
-  const handleCameraToggle = async () => {
-    if (isCameraActive) {
-      stopCamera();
-      setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-      setRecognizedName("");
-      recognizedNameRef.current = "";
-      setShowLightWarning(false);
-      setCameraError("");
-    } else {
-      setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-    }
+  const handleCameraSwitch = async () => {
+    if (!isCameraActive) return;
+
+    setIsSwitchingCamera(true);
+    clearCanvas();
+    setRecognizedName("");
+    recognizedNameRef.current = "";
+    
+    // Switch the facing mode
+    const newFacingMode = cameraFacingMode === "user" ? "environment" : "user";
+    setCameraFacingMode(newFacingMode);
+    
+    // Restart camera with new facing mode
+    await startCamera(newFacingMode);
+    
+    setIsSwitchingCamera(false);
+    lastDetectionTimeRef.current = Date.now();
   };
 
   useEffect(() => {
@@ -280,7 +293,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isCameraActive) {
-      startCamera();
+      startCamera(cameraFacingMode);
     } else {
       stopCamera();
     }
@@ -288,10 +301,10 @@ export default function HomePage() {
     return () => {
       stopCamera();
     };
-  }, [isCameraActive, cameraFacingMode]);
+  }, [isCameraActive]);
 
   useEffect(() => {
-    if (isCameraActive && isModelLoaded && registeredUsers.length > 0) {
+    if (isCameraActive && isModelLoaded && registeredUsers.length > 0 && !isSwitchingCamera) {
       lastDetectionTimeRef.current = Date.now();
 
       detectionIntervalRef.current = setInterval(() => {
@@ -307,7 +320,7 @@ export default function HomePage() {
       clearCanvas();
       setShowLightWarning(false);
     };
-  }, [isCameraActive, isModelLoaded, registeredUsers.length]);
+  }, [isCameraActive, isModelLoaded, registeredUsers.length, isSwitchingCamera]);
 
   if (loading) {
     return (
@@ -354,16 +367,20 @@ export default function HomePage() {
             <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
           </button>
 
-          {/* Mobile camera switch button */}
+          {/* Mobile camera switch button - NOW WORKS WHILE CAMERA IS ACTIVE */}
           <button
             type="button"
-            onClick={handleCameraToggle}
-            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden"
-            disabled={isCameraActive}
+            onClick={handleCameraSwitch}
+            disabled={!isCameraActive || isSwitchingCamera}
+            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={16} className={isSwitchingCamera ? "animate-spin" : ""} />
             <span>
-              {cameraFacingMode === "user" ? "Front Cam" : "Back Cam"}
+              {isSwitchingCamera 
+                ? "Switching..." 
+                : cameraFacingMode === "user" 
+                  ? "Switch to Back" 
+                  : "Switch to Front"}
             </span>
           </button>
 
@@ -421,8 +438,7 @@ export default function HomePage() {
                   Start Camera
                 </h4>
                 <p className="text-neutral-400 text-xs md:text-sm">
-                  Click Start Camera to activate the webcam. Ensure good
-                  lighting.
+                  Click Start Camera to activate the webcam. Use the switch button to change between front/back cameras on mobile.
                 </p>
               </div>
 
@@ -450,8 +466,7 @@ export default function HomePage() {
                   <span className="font-semibold text-white">Pro Tips:</span>{" "}
                   Use good lighting, face the camera directly, and stay 2-3 feet
                   away for optimal recognition. Green box = recognized user, Red
-                  box = unknown person. On mobile, switch cameras before
-                  starting.
+                  box = unknown person. On mobile, you can switch cameras while the camera is running!
                 </div>
               </div>
             </div>
@@ -477,7 +492,15 @@ export default function HomePage() {
                     ref={canvasRef}
                     className="absolute inset-0 w-full h-full"
                   />
-                  {recognizedName && (
+                  {isSwitchingCamera && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <RefreshCw className="w-12 h-12 text-lime-400 animate-spin" />
+                        <div className="text-white font-semibold">Switching camera...</div>
+                      </div>
+                    </div>
+                  )}
+                  {recognizedName && !isSwitchingCamera && (
                     <div className="absolute top-2 md:top-4 left-2 md:left-4 bg-black/70 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold text-sm md:text-lg">
                       {recognizedName}
                     </div>
@@ -495,7 +518,7 @@ export default function HomePage() {
                       </span>
                     </div>
                   )}
-                  {showLightWarning && registeredUsers.length > 0 && (
+                  {showLightWarning && registeredUsers.length > 0 && !isSwitchingCamera && (
                     <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center animate-pulse">
                       <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
                       <span>Put your face in more light</span>

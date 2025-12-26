@@ -7,7 +7,7 @@ import { loadFaceApiModels } from "@/lib/faceapi";
 
 declare global {
   interface Window {
-    faceapi: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    faceapi: any;
   }
 }
 
@@ -117,9 +117,22 @@ export default function RegisterPeople({
       setShowRegisterModal(false);
       onRegistrationComplete();
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
-    } catch (error: any) {// eslint-disable-line @typescript-eslint/no-explicit-any
-      const errMsg =
-        error.response?.data?.error || error.message || "Registration failed";
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      
+      // Better error handling
+      let errMsg = "Registration failed";
+      
+      if (error.response?.status === 409) {
+        errMsg = `Person with name "${userName}" already exists. Please use a different name or delete the existing person first.`;
+      } else if (error.response?.status === 401) {
+        errMsg = "Authentication failed. Please log in again.";
+      } else if (error.response?.data?.error) {
+        errMsg = error.response.data.error;
+      } else if (error.message) {
+        errMsg = error.message;
+      }
+      
       setMessage({ type: "error", text: errMsg });
     }
 
