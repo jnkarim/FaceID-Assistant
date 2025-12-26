@@ -47,22 +47,12 @@ export default function Signup() {
       {/* Header - Mobile Optimized */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between sm:justify-center border-b border-black lg:gap-4">
         {/* Logo */}
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Radar className="w-5 h-5 sm:w-6 sm:h-6 text-lime-400" />
           <div className="text-white text-base sm:text-lg lg:text-xl font-bold">
             FaceID Assistant
           </div>
-        </div>
-
-        {/* Navigate to Home */}
-        <nav className="flex items-center">
-          <Link
-            href="/"
-            className="text-sm sm:text-base lg:text-lg font-bold text-neutral-400 hover:text-lime-400 transition"
-          >
-            Home
-          </Link>
-        </nav>
+        </Link>
       </div>
 
       {/* Main Content - Mobile Optimized */}

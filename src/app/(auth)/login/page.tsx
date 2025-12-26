@@ -44,20 +44,10 @@ export default function Login() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Radar className="w-5 h-5 sm:w-6 sm:h-6 text-lime-400" />
-          <div className="text-white text-base sm:text-lg lg:text-xl font-bold">
+          <Link href="/" className="text-white text-base sm:text-lg lg:text-xl font-bold">
             FaceID Assistant
-          </div>
-        </div>
-
-        {/* Navigate to Home */}
-        <nav className="flex items-center">
-          <Link
-            href="/"
-            className="text-sm sm:text-base lg:text-lg font-bold text-neutral-400 hover:text-lime-400 transition"
-          >
-            Home
           </Link>
-        </nav>
+        </div>
       </div>
 
       {/* Main Content - Mobile Optimized */}
@@ -66,12 +56,12 @@ export default function Login() {
           {/* Header Section */}
           <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
             <div className="text-base sm:text-lg lg:text-xl font-semibold text-neutral-400">
-              LOG IN NOW
+              AUTHENTICATION REQUIRED
             </div>
             
             <div className="flex flex-row items-start gap-1 sm:gap-2">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white">
-                Welcome Back
+                Good to See You Again
               </h1>
               <span className="text-lime-400 text-2xl sm:text-3xl lg:text-4xl font-semibold">
                 !
@@ -80,7 +70,7 @@ export default function Login() {
 
             <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-2">
               <h2 className="text-sm sm:text-base lg:text-lg font-bold text-neutral-400">
-                {"Don't have an account?"}
+                New here? Create an account.
               </h2>
               <Link
                 href="/signup"
@@ -137,7 +127,7 @@ export default function Login() {
                 Log in
               </button>
               <p className="text-neutral-500 text-xs sm:text-sm mt-4 sm:mt-8 text-center px-4">
-                Log in to access your account. Nice to have you back.
+                Log in to access your account
               </p>
             </div>
           </div>
