@@ -18,6 +18,16 @@ const UserSchema = new mongoose.Schema({
     type: String,
     reuired: [true, "Please provide strong password"],
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true, // Allows null values while maintaining uniqueness for non-null values
+  },
+  authProvider: {
+    type: String,
+    enum: ["local", "google"],
+    default: "local",
+  },
   verifyToken: String,
   verifyTokenExpiry: Date,
 });
