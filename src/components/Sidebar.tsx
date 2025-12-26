@@ -11,6 +11,7 @@ export interface NavItem {
   href: string;
   icon: React.ReactNode;
   isActive?: boolean;
+  requiresAuth?: boolean; // Added this property
 }
 
 export default function Sidebar() {
@@ -32,8 +33,18 @@ export default function Sidebar() {
 
   const navigation: NavItem[] = [
     { name: "Home", href: "/", icon: <Home className="w-6 h-6" /> },
-    { name: "People", href: "/people", icon: <Users className="w-6 h-6" /> },
+    {
+      name: "People",
+      href: "/people",
+      icon: <Users className="w-6 h-6" />,
+      requiresAuth: true,
+    },
   ];
+
+  // Filter navigation items based on authentication
+  const visibleNavigation = navigation.filter(
+    (item) => !item.requiresAuth || isAuthenticated
+  );
 
   const logout = async () => {
     try {
@@ -51,22 +62,20 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-4">
           <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-          <Radar className="w-5 h-5 sm:w-6 sm:h-6 text-lime-400" />
-          <div className="text-white text-base sm:text-lg lg:text-xl font-bold">
-            FaceID
+            <div className="flex items-center gap-2">
+              <Radar className="w-5 h-5 sm:w-6 sm:h-6 text-lime-400" />
+              <div className="text-white text-base sm:text-lg lg:text-xl font-bold">
+                FaceID
+              </div>
+            </div>
           </div>
-        </div>
-          </div>
-          <p className="text-gray-400 text-sm mt-1">
-            SMART RECOGNITION SYSTEM
-          </p>
+          <p className="text-gray-400 text-sm mt-1">SMART RECOGNITION SYSTEM</p>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 mt-4">
           <ul className="space-y-2">
-            {navigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <li key={item.name}>
@@ -111,16 +120,14 @@ export default function Sidebar() {
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-gray-800 z-50">
         <div className="flex items-center justify-around px-4 py-3">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors duration-200 ${
-                  isActive
-                    ? "text-lime-400"
-                    : "text-gray-400 hover:text-white"
+                  isActive ? "text-lime-400" : "text-gray-400 hover:text-white"
                 }`}
               >
                 {item.icon}
@@ -128,7 +135,7 @@ export default function Sidebar() {
               </Link>
             );
           })}
-          
+
           {/* Auth Button */}
           {isAuthenticated ? (
             <button

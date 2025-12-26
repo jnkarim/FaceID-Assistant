@@ -8,9 +8,12 @@ import {
   Video,
   Scan,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { loadFaceApiModels } from "@/lib/faceapi";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 declare global {
   interface Window {
@@ -19,6 +22,7 @@ declare global {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -31,6 +35,8 @@ export default function HomePage() {
   >("environment");
   const [cameraError, setCameraError] = useState("");
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +44,21 @@ export default function HomePage() {
   const recognizedNameRef = useRef("");
   const lastDetectionTimeRef = useRef<number>(Date.now());
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await axios.get("/api/users/me");
+        setIsAuthenticated(true);
+      } catch (error: any) {
+        setIsAuthenticated(false);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   const loadUsers = async () => {
     try {
@@ -52,6 +73,12 @@ export default function HomePage() {
   };
 
   const startCamera = async (facingMode: "user" | "environment") => {
+    // Check authentication before starting camera
+    if (!isAuthenticated) {
+      setCameraError("Please login to use the camera");
+      return;
+    }
+
     setCameraError("");
 
     try {
@@ -259,22 +286,41 @@ export default function HomePage() {
   };
 
   const handleCameraSwitch = async () => {
-    if (!isCameraActive) return;
+    if (!isCameraActive || !isAuthenticated) return;
 
     setIsSwitchingCamera(true);
     clearCanvas();
     setRecognizedName("");
     recognizedNameRef.current = "";
-    
+
     // Switch the facing mode
     const newFacingMode = cameraFacingMode === "user" ? "environment" : "user";
     setCameraFacingMode(newFacingMode);
-    
+
     // Restart camera with new facing mode
     await startCamera(newFacingMode);
-    
+
     setIsSwitchingCamera(false);
     lastDetectionTimeRef.current = Date.now();
+  };
+
+  const handleCameraToggle = () => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+
+    const willBeActive = !isCameraActive;
+    setIsCameraActive(willBeActive);
+    if (!willBeActive) {
+      setRecognizedName("");
+      recognizedNameRef.current = "";
+      setShowLightWarning(false);
+      setCameraError("");
+    } else {
+      loadUsers();
+      lastDetectionTimeRef.current = Date.now();
+    }
   };
 
   useEffect(() => {
@@ -292,7 +338,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (isCameraActive) {
+    if (isCameraActive && isAuthenticated) {
       startCamera(cameraFacingMode);
     } else {
       stopCamera();
@@ -301,10 +347,16 @@ export default function HomePage() {
     return () => {
       stopCamera();
     };
-  }, [isCameraActive]);
+  }, [isCameraActive, isAuthenticated]);
 
   useEffect(() => {
-    if (isCameraActive && isModelLoaded && registeredUsers.length > 0 && !isSwitchingCamera) {
+    if (
+      isCameraActive &&
+      isModelLoaded &&
+      registeredUsers.length > 0 &&
+      !isSwitchingCamera &&
+      isAuthenticated
+    ) {
       lastDetectionTimeRef.current = Date.now();
 
       detectionIntervalRef.current = setInterval(() => {
@@ -320,9 +372,15 @@ export default function HomePage() {
       clearCanvas();
       setShowLightWarning(false);
     };
-  }, [isCameraActive, isModelLoaded, registeredUsers.length, isSwitchingCamera]);
+  }, [
+    isCameraActive,
+    isModelLoaded,
+    registeredUsers.length,
+    isSwitchingCamera,
+    isAuthenticated,
+  ]);
 
-  if (loading) {
+  if (loading || checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900">
         <div className="flex flex-col items-center gap-4">
@@ -367,24 +425,35 @@ export default function HomePage() {
             <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
           </button>
 
-          {/* Mobile camera switch button - NOW WORKS WHILE CAMERA IS ACTIVE */}
+          {/* Mobile camera switch button */}
           <button
             type="button"
             onClick={handleCameraSwitch}
-            disabled={!isCameraActive || isSwitchingCamera}
+            disabled={!isCameraActive || isSwitchingCamera || !isAuthenticated}
             className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw size={16} className={isSwitchingCamera ? "animate-spin" : ""} />
+            <RefreshCw
+              size={16}
+              className={isSwitchingCamera ? "animate-spin" : ""}
+            />
             <span>
-              {isSwitchingCamera 
-                ? "Switching..." 
-                : cameraFacingMode === "user" 
-                  ? "Switch to Back" 
-                  : "Switch to Front"}
+              {isSwitchingCamera
+                ? "Switching..."
+                : cameraFacingMode === "user"
+                ? "Switch to Back"
+                : "Switch to Front"}
             </span>
           </button>
 
-          <button className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base">
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                router.push("/login");
+              }
+            }}
+            disabled={!isAuthenticated}
+            className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <UserPlus size={16} className="md:w-5 md:h-5" />
             <span className="hidden sm:inline">Register New People</span>
             <span className="sm:hidden">Register</span>
@@ -438,7 +507,8 @@ export default function HomePage() {
                   Start Camera
                 </h4>
                 <p className="text-neutral-400 text-xs md:text-sm">
-                  Click Start Camera to activate the webcam. Use the switch button to change between front/back cameras on mobile.
+                  Click Start Camera to activate the webcam. Use the switch
+                  button to change between front/back cameras on mobile.
                 </p>
               </div>
 
@@ -466,7 +536,8 @@ export default function HomePage() {
                   <span className="font-semibold text-white">Pro Tips:</span>{" "}
                   Use good lighting, face the camera directly, and stay 2-3 feet
                   away for optimal recognition. Green box = recognized user, Red
-                  box = unknown person. On mobile, you can switch cameras while the camera is running!
+                  box = unknown person. On mobile, you can switch cameras while
+                  the camera is running!
                 </div>
               </div>
             </div>
@@ -479,7 +550,7 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-stone-950 border-2 border-black rounded-2xl overflow-hidden mb-6 md:mb-8">
             <div className="relative bg-black flex items-center justify-center h-[70vh] sm:aspect-video">
-              {isCameraActive ? (
+              {isCameraActive && isAuthenticated ? (
                 <>
                   <video
                     ref={videoRef}
@@ -496,7 +567,9 @@ export default function HomePage() {
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <div className="flex flex-col items-center gap-3">
                         <RefreshCw className="w-12 h-12 text-lime-400 animate-spin" />
-                        <div className="text-white font-semibold">Switching camera...</div>
+                        <div className="text-white font-semibold">
+                          Switching camera...
+                        </div>
                       </div>
                     </div>
                   )}
@@ -518,24 +591,35 @@ export default function HomePage() {
                       </span>
                     </div>
                   )}
-                  {showLightWarning && registeredUsers.length > 0 && !isSwitchingCamera && (
-                    <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center animate-pulse">
-                      <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
-                      <span>Put your face in more light</span>
-                    </div>
-                  )}
+                  {showLightWarning &&
+                    registeredUsers.length > 0 &&
+                    !isSwitchingCamera && (
+                      <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center animate-pulse">
+                        <Info
+                          size={14}
+                          className="md:w-4 md:h-4 flex-shrink-0"
+                        />
+                        <span>Put your face in more light</span>
+                      </div>
+                    )}
                 </>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 md:gap-6 p-4">
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-neutral-800 rounded-full flex items-center justify-center">
-                    <Camera className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
+                    {!isAuthenticated ? (
+                      <Lock className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
+                    ) : (
+                      <Camera className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
+                    )}
                   </div>
                   <div className="text-center">
                     <div className="text-neutral-400 text-lg md:text-xl mb-2">
-                      Camera Inactive
+                      {!isAuthenticated ? "Login Required" : "Camera Inactive"}
                     </div>
                     <p className="text-neutral-500 text-xs md:text-sm">
-                      Click Start Camera to begin face recognition
+                      {!isAuthenticated
+                        ? "Please login to use face recognition features"
+                        : "Click Start Camera to begin face recognition"}
                     </p>
                   </div>
                 </div>
@@ -544,22 +628,15 @@ export default function HomePage() {
             <div className="p-4 md:p-6 bg-black/60 border-t border-lime-500/20 flex justify-center">
               <button
                 type="button"
-                onClick={() => {
-                  const willBeActive = !isCameraActive;
-                  setIsCameraActive(willBeActive);
-                  if (!willBeActive) {
-                    setRecognizedName("");
-                    recognizedNameRef.current = "";
-                    setShowLightWarning(false);
-                    setCameraError("");
-                  } else {
-                    loadUsers();
-                    lastDetectionTimeRef.current = Date.now();
-                  }
-                }}
+                onClick={handleCameraToggle}
                 className="w-full px-4 md:px-6 py-3 md:py-4 bg-lime-400 hover:bg-lime-300 transition text-black text-base md:text-lg rounded-xl font-bold flex items-center justify-center gap-2"
               >
-                {isCameraActive ? (
+                {!isAuthenticated ? (
+                  <>
+                    <Lock className="w-4 h-4 md:w-5 md:h-5" />
+                    Login to Use Camera
+                  </>
+                ) : isCameraActive ? (
                   <>
                     <Video className="w-4 h-4 md:w-5 md:h-5" />
                     Stop Camera
@@ -586,7 +663,7 @@ export default function HomePage() {
             </div>
             <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
               <div className="text-xl md:text-3xl font-bold text-blue-400">
-                {isCameraActive ? "Active" : "Off"}
+                {isCameraActive && isAuthenticated ? "Active" : "Off"}
               </div>
               <div className="text-neutral-400 text-xs md:text-sm mt-1">
                 Camera Status
