@@ -13,9 +13,9 @@ export function getUserFromRequest(req: NextRequest): TokenData | null {
     const token = req.cookies.get("token")?.value;
     if (!token) return null;
 
+    // If valid, it returns the payload you put in when signing (id, firstName, lastName, email)
     const decoded = jwt.verify(token, process.env.TOKEN_SECRET!) as TokenData;
 
-    console.log("getUserFromRequest decoded:", decoded);
     return decoded;
   } catch (err) {
     console.error("getUserFromRequest verify error:", err);

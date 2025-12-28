@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { connect } from "@/dbConfig/dbConfig";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -15,22 +16,36 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "User doesnot exist" },
+        { error: "User does not exist" },
+        { status: 400 }
+      );
+    }
+
+    if (user.authProvider === "google") {
+      return NextResponse.json(
+        { error: "Please use Google Sign-In for this account" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Check if password exists (safety check)
+    if (!user.password) {
+      return NextResponse.json(
+        { error: "This account uses Google Sign-In. Please use Google to log in." },
         { status: 400 }
       );
     }
 
     const validPassword = await bcryptjs.compare(password, user.password);
+
     if (!validPassword) {
       return NextResponse.json(
-        {
-          error: "Invalid password",
-        },
+        { error: "Invalid password" },
         { status: 400 }
       );
     }
 
-    // generate token
+    // Generate token
     const tokenData = {
       id: user._id,
       firstName: user.firstName,
@@ -41,23 +56,23 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
       expiresIn: "7d",
     });
-    console.log("LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
 
+    console.log("LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
 
     const response = NextResponse.json({
       message: "Login successful",
       success: true,
     });
 
-    // token save in cookie
+    // Token save in cookie
     response.cookies.set("token", token, {
       httpOnly: true,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60, 
     });
 
     return response;
-  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

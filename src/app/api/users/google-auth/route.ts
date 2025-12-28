@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/UserModel";
+import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
 connect();
@@ -9,7 +11,6 @@ export async function POST(request: NextRequest) {
     const reqBody = await request.json();
     const { email, firstName, lastName, googleId, profilePicture } = reqBody;
 
-    // Check if user already exists
     const user = await User.findOne({ email });
 
     if (user) {
@@ -17,12 +18,25 @@ export async function POST(request: NextRequest) {
       if (!user.googleId) {
         user.googleId = googleId;
         user.profilePicture = profilePicture;
-        user.authProvider = 'google';
-        user.isVerified = true; // Google accounts are pre-verified
+        user.authProvider = "google";
         await user.save();
       }
 
-      return NextResponse.json({
+      const tokenData = {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      };
+
+      const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
+        expiresIn: "7d",
+      });
+
+      console.log("GOOGLE LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
+
+      const response = NextResponse.json({
+        status: 200,
         message: "Login successful",
         success: true,
         user: {
@@ -33,6 +47,15 @@ export async function POST(request: NextRequest) {
           profilePicture: user.profilePicture,
         },
       });
+
+      //attach cookie with response object
+      response.cookies.set("token", token, {
+        httpOnly: true,
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+      });
+
+      return response;
     }
 
     // Create new user for Google sign-up
@@ -42,13 +65,23 @@ export async function POST(request: NextRequest) {
       email,
       googleId,
       profilePicture,
-      authProvider: 'google',
-      isVerified: true, // Google accounts are pre-verified
+      authProvider: "google",
     });
 
     const savedUser = await newUser.save();
 
-    return NextResponse.json({
+    const tokenData = {
+      id: savedUser._id,
+      firstName: savedUser.firstName,
+      lastName: savedUser.lastName,
+      email: savedUser.email,
+    };
+
+    const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
+      expiresIn: "7d",
+    });
+
+    const response = NextResponse.json({
       message: "User created successfully with Google",
       success: true,
       user: {
@@ -59,6 +92,14 @@ export async function POST(request: NextRequest) {
         profilePicture: savedUser.profilePicture,
       },
     });
+
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    return response;
   } catch (error: any) {
     console.error("Google auth error:", error);
     return NextResponse.json(
