@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/UserModel";
 import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
 connect();
@@ -8,7 +10,7 @@ connect();
 export async function POST(request: NextRequest) {
   try {
     const reqBody = await request.json();
-    const {firstName, lastName, email, password} = reqBody;
+    const { firstName, lastName, email, password } = reqBody;
 
     const user = await User.findOne({ email });
 
@@ -27,16 +29,40 @@ export async function POST(request: NextRequest) {
       lastName,
       email,
       password: hashedPassword,
+      authProvider: "local",
     });
 
+    // stores in mongoDB
     const savedUser = await newUser.save();
 
-    return NextResponse.json({
+    const tokenData = {
+      id: savedUser._id,
+      firstName: savedUser.firstName,
+      lastName: savedUser.lastName,
+      email: savedUser.email,
+    };
+
+    const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
+      expiresIn: "7d",
+    });
+
+    console.log("SIGNUP TOKEN_SECRET:", process.env.TOKEN_SECRET);
+
+    const response = NextResponse.json({
+      status: 200,
       message: "User created successfully",
       success: true,
       savedUser,
     });
-  } catch (error: any) {// eslint-disable-line @typescript-eslint/no-explicit-any
+
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    return response;
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

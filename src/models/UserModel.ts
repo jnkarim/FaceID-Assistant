@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema({
   googleId: {
     type: String,
     unique: true,
-    sparse: true, // Allows null values while maintaining uniqueness for non-null values
+    sparse: true, // Only enforce unique on documents where googleId actually has a value
   },
   authProvider: {
     type: String,
