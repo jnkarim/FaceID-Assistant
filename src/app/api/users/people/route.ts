@@ -12,12 +12,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
-    const { name, descriptor } = body;
+    const { name, info, descriptor } = body;
+
+    console.log("Received data:", { name, info: info ? "present" : "missing", descriptorLength: descriptor?.length });
 
     // Validate input
-    if (!name || typeof name !== "string") {
+    if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json(
-        { error: "Name is required and must be a string" },
+        { error: "Name is required and must be a non-empty string" },
+        { status: 400 }
+      );
+    }
+
+    if (!info || typeof info !== "string" || info.trim() === "") {
+      return NextResponse.json(
+        { error: "Info/description is required and must be a non-empty string" },
         { status: 400 }
       );
     }
@@ -54,13 +63,22 @@ export async function POST(request: NextRequest) {
     // Create new person
     const newPerson = new Person({
       name: name.trim(),
+      info: info.trim(),
       descriptor,
       userId: user.id,
     });
 
+    console.log("Creating person with data:", {
+      name: newPerson.name,
+      info: newPerson.info,
+      hasDescriptor: !!newPerson.descriptor,
+      descriptorLength: newPerson.descriptor?.length,
+      userId: newPerson.userId
+    });
+
     await newPerson.save();
 
-    console.log(`Person registered: ${name}`);
+    console.log(`Person registered: ${name} with info: ${info.substring(0, 50)}...`);
     const totalCount = await Person.countDocuments();
     console.log(`Total persons: ${totalCount}`);
 
@@ -71,6 +89,7 @@ export async function POST(request: NextRequest) {
         person: {
           id: newPerson._id,
           name: newPerson.name,
+          info: newPerson.info,
         },
       },
       { status: 201 }
@@ -100,7 +119,7 @@ export async function GET(request: NextRequest) {
     }
 
     const persons = await Person.find({ userId: user.id })
-      .select("name descriptor createdAt")
+      .select("name info descriptor createdAt")
       .lean();
 
     console.log(`Fetching persons. Total: ${persons.length}`);
@@ -111,6 +130,7 @@ export async function GET(request: NextRequest) {
         users: persons.map((p) => ({
           id: p._id,
           name: p.name,
+          info: p.info,
           descriptor: p.descriptor,
           createdAt: p.createdAt,
         })),
@@ -124,8 +144,6 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-  console.log("LOGIN TOKEN_SECRET:", process.env.TOKEN_SECRET);
-
 }
 
 // DELETE - Remove a person by name

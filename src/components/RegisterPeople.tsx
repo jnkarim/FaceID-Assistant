@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useRef } from "react";
@@ -20,6 +21,7 @@ export default function RegisterPeople({
 }: RegisterPeopleProps) {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userInfo, setUserInfo] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -42,6 +44,7 @@ export default function RegisterPeople({
       setSelectedImage(event.target?.result as string);
       setMessage({ type: "", text: "" });
     };
+    // turns that File into a string (data URL)
     reader.readAsDataURL(file);
   };
 
@@ -57,6 +60,10 @@ export default function RegisterPeople({
       setMessage({ type: "error", text: "Please enter a name" });
       return;
     }
+    if (!userInfo.trim()) {
+      setMessage({ type: "error", text: "Please enter the info of the user" });
+      return;
+    }
     if (!selectedImage) {
       setMessage({ type: "error", text: "Please upload a photo" });
       return;
@@ -69,7 +76,13 @@ export default function RegisterPeople({
     setIsProcessing(true);
     setMessage({ type: "info", text: "Loading face recognition models..." });
 
-    // 1) Ensure face-api models are loaded
+    console.log("Sending data:", {
+      name: userName.trim(),
+      info: userInfo.trim(),
+      hasDescriptor: true
+    });
+
+    // Ensure face-api models are loaded
     const modelsOk = await loadFaceApiModels();
     if (!modelsOk) {
       setIsProcessing(false);
@@ -102,9 +115,10 @@ export default function RegisterPeople({
         return;
       }
 
-      // POST to per-user people API
+      // POST to per-user people API with info field
       await axios.post("/api/users/people", {
         name: userName.trim(),
+        info: userInfo.trim(),
         descriptor: Array.from(detection.descriptor),
       });
 
@@ -113,16 +127,17 @@ export default function RegisterPeople({
         text: `Person "${userName}" registered successfully!`,
       });
       setUserName("");
+      setUserInfo("");
       clearImage();
       setShowRegisterModal(false);
       onRegistrationComplete();
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
     } catch (error: any) {
       console.error("Registration error:", error);
-      
+
       // Better error handling
       let errMsg = "Registration failed";
-      
+
       if (error.response?.status === 409) {
         errMsg = `Person with name "${userName}" already exists. Please use a different name or delete the existing person first.`;
       } else if (error.response?.status === 401) {
@@ -132,7 +147,7 @@ export default function RegisterPeople({
       } else if (error.message) {
         errMsg = error.message;
       }
-      
+
       setMessage({ type: "error", text: errMsg });
     }
 
@@ -178,8 +193,19 @@ export default function RegisterPeople({
               type="text"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
-              placeholder="Enter full name"
+              placeholder="Enter Full Name"
               className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white mb-4 focus:outline-none focus:border-lime-400"
+            />
+            <textarea
+              value={userInfo}
+              onChange={(e) => {
+                setUserInfo(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
+              placeholder="Enter Info About The User"
+              rows={1}
+              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white mb-4 focus:outline-none focus:border-lime-400 resize-none overflow-hidden"
             />
 
             {/* Image Upload */}
@@ -191,9 +217,7 @@ export default function RegisterPeople({
                 >
                   <Upload className="w-12 h-12 text-neutral-500 mx-auto mb-3" />
                   <p className="text-neutral-400 mb-1">Click to upload photo</p>
-                  <p className="text-neutral-600 text-sm">
-                    JPG, PNG (Max 5MB)
-                  </p>
+                  <p className="text-neutral-600 text-sm">JPG, PNG (Max 5MB)</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -228,6 +252,7 @@ export default function RegisterPeople({
                 onClick={() => {
                   setShowRegisterModal(false);
                   setUserName("");
+                  setUserInfo("");
                   clearImage();
                   setMessage({ type: "", text: "" });
                 }}
@@ -237,7 +262,7 @@ export default function RegisterPeople({
               </button>
               <button
                 onClick={registerPeople}
-                disabled={isProcessing || !userName.trim() || !selectedImage}
+                disabled={isProcessing || !userName.trim() || !userInfo.trim() || !selectedImage}
                 className="flex-1 px-4 py-3 bg-lime-400 hover:bg-lime-300 text-black rounded-lg font-bold transition disabled:bg-neutral-600 disabled:cursor-not-allowed"
               >
                 {isProcessing ? "Processing..." : "Register"}

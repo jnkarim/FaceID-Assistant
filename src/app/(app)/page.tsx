@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -26,8 +27,9 @@ export default function HomePage() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [recognizedName, setRecognizedName] = useState("");
+  const [recognizedInfo, setRecognizedInfo] = useState(""); // New state for user info
   const [showGuide, setShowGuide] = useState(false);
   const [showLightWarning, setShowLightWarning] = useState(false);
   const [cameraFacingMode, setCameraFacingMode] = useState<
@@ -42,6 +44,7 @@ export default function HomePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recognizedNameRef = useRef("");
+  const recognizedInfoRef = useRef(""); // New ref for user info
   const lastDetectionTimeRef = useRef<number>(Date.now());
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -65,7 +68,7 @@ export default function HomePage() {
       const response = await fetch("/api/users/people");
       if (response.ok) {
         const data = await response.json();
-        setRegisteredUsers(data.users?.map((u: any) => u.name) || []);
+        setRegisteredUsers(data.users || []);
       }
     } catch (error) {
       console.log("No users found yet");
@@ -73,7 +76,6 @@ export default function HomePage() {
   };
 
   const startCamera = async (facingMode: "user" | "environment") => {
-    // Check authentication before starting camera
     if (!isAuthenticated) {
       setCameraError("Please login to use the camera");
       return;
@@ -82,13 +84,11 @@ export default function HomePage() {
     setCameraError("");
 
     try {
-      // Stop existing stream first
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
 
-      // Try with exact facingMode first
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1920 },
@@ -104,7 +104,6 @@ export default function HomePage() {
     } catch (error) {
       console.error("Error with exact facingMode:", error);
 
-      // Fallback: try with ideal facingMode
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -121,7 +120,6 @@ export default function HomePage() {
       } catch (fallbackError) {
         console.error("Error with ideal facingMode:", fallbackError);
 
-        // Final fallback: try without facingMode
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -164,10 +162,12 @@ export default function HomePage() {
     }
   };
 
-  const updateRecognizedName = (name: string) => {
-    if (recognizedNameRef.current !== name) {
+  const updateRecognizedName = (name: string, info: string = "") => {
+    if (recognizedNameRef.current !== name || recognizedInfoRef.current !== info) {
       recognizedNameRef.current = name;
+      recognizedInfoRef.current = info;
       setRecognizedName(name);
+      setRecognizedInfo(info);
 
       if (name) {
         lastDetectionTimeRef.current = Date.now();
@@ -204,7 +204,8 @@ export default function HomePage() {
         .withFaceDescriptor();
 
       if (!detection) {
-        updateRecognizedName("");
+        // Don't clear the recognized name - keep it visible
+        // Only clear the canvas
         clearCanvas();
 
         const timeSinceLastDetection =
@@ -218,11 +219,7 @@ export default function HomePage() {
       lastDetectionTimeRef.current = Date.now();
       setShowLightWarning(false);
 
-      const response = await fetch("/api/users/people");
-      if (!response.ok) return;
-
-      const data = await response.json();
-      const labeledDescriptors = data.users.map(
+      const labeledDescriptors = registeredUsers.map(
         (user: any) =>
           new window.faceapi.LabeledFaceDescriptors(user.name, [
             new Float32Array(user.descriptor),
@@ -238,10 +235,14 @@ export default function HomePage() {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
       if (bestMatch.label !== "unknown") {
-        updateRecognizedName(bestMatch.label);
+        const matchedUser = registeredUsers.find((u: any) => u.name === bestMatch.label);
+        const userInfo = matchedUser?.info || "";
+        console.log("Matched user:", matchedUser);
+        console.log("User info:", userInfo);
+        updateRecognizedName(bestMatch.label, userInfo);
         drawDetection(detection, bestMatch.label, video);
       } else {
-        updateRecognizedName("Unknown Person");
+        updateRecognizedName("Unknown Person", "");
         drawDetection(detection, "Unknown", video);
       }
     } catch (error) {
@@ -291,13 +292,13 @@ export default function HomePage() {
     setIsSwitchingCamera(true);
     clearCanvas();
     setRecognizedName("");
+    setRecognizedInfo("");
     recognizedNameRef.current = "";
+    recognizedInfoRef.current = "";
 
-    // Switch the facing mode
     const newFacingMode = cameraFacingMode === "user" ? "environment" : "user";
     setCameraFacingMode(newFacingMode);
 
-    // Restart camera with new facing mode
     await startCamera(newFacingMode);
 
     setIsSwitchingCamera(false);
@@ -313,8 +314,11 @@ export default function HomePage() {
     const willBeActive = !isCameraActive;
     setIsCameraActive(willBeActive);
     if (!willBeActive) {
+      // Only clear when stopping camera
       setRecognizedName("");
+      setRecognizedInfo("");
       recognizedNameRef.current = "";
+      recognizedInfoRef.current = "";
       setShowLightWarning(false);
       setCameraError("");
     } else {
@@ -425,7 +429,6 @@ export default function HomePage() {
             <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
           </button>
 
-          {/* Mobile camera switch button */}
           <button
             type="button"
             onClick={handleCameraSwitch}
@@ -536,8 +539,7 @@ export default function HomePage() {
                   <span className="font-semibold text-white">Pro Tips:</span>{" "}
                   Use good lighting, face the camera directly, and stay 2-3 feet
                   away for optimal recognition. Green box = recognized user, Red
-                  box = unknown person. On mobile, you can switch cameras while
-                  the camera is running!
+                  box = unknown person.
                 </div>
               </div>
             </div>
@@ -574,8 +576,43 @@ export default function HomePage() {
                     </div>
                   )}
                   {recognizedName && !isSwitchingCamera && (
-                    <div className="absolute top-2 md:top-4 left-2 md:left-4 bg-black/70 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold text-sm md:text-lg">
-                      {recognizedName}
+                    <div className="absolute top-4 left-4 right-4 md:right-auto md:max-w-sm">
+                      {/* Professional Card Design */}
+                      <div className="bg-white/95 backdrop-blur-md rounded-lg shadow-lg border border-neutral-200 overflow-hidden">
+                        {/* Header with Status */}
+                        <div className="bg-amber-500 px-4 py-2 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                          <span className="text-white text-xs font-semibold uppercase tracking-wide">
+                            Recognized
+                          </span>
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="px-4 py-2">
+                          {/* Name */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex-1">
+                              <h3 className="text-md font-bold text-neutral-800 leading-tight">
+                                {recognizedName}
+                              </h3>
+                              {recognizedInfo && (
+                                <p className="text-xs text-neutral-500">
+                                  Profile Information
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Description */}
+                          {recognizedInfo && (
+                            <div className="border-t border-neutral-300">
+                              <p className="text-sm text-neutral-700 leading-relaxed">
+                                {recognizedInfo}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                   {cameraError && (

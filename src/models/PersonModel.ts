@@ -5,7 +5,11 @@ const personSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, "Please provide a name"],
-      unique: true,
+      trim: true,
+    },
+    info: {
+      type: String,
+      required: [true, "Please provide description of the user"],
       trim: true,
     },
     descriptor: {
@@ -18,7 +22,7 @@ const personSchema = new mongoose.Schema(
         message: "Descriptor must contain exactly 128 numbers",
       },
     },
-    //Relationship between two models
+    // Relationship between two models
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -29,6 +33,9 @@ const personSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Create compound index: name must be unique per user
+personSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 const Person = mongoose.models.Person || mongoose.model("Person", personSchema);
 

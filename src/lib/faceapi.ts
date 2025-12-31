@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let modelsLoaded = false;
 
 export const loadFaceApiModels = async () => {
@@ -5,13 +6,13 @@ export const loadFaceApiModels = async () => {
   
   try {
     // Wait for face-api to be loaded from CDN
-    if (typeof window === 'undefined' || !(window as any).faceapi) {// eslint-disable-line @typescript-eslint/no-explicit-any
+    if (typeof window === 'undefined' || !(window as any).faceapi) {  
       console.error('face-api.js not loaded from CDN');
       return false;
     }
 
     const MODEL_URL = '/models';
-    const faceapi = (window as any).faceapi;// eslint-disable-line @typescript-eslint/no-explicit-any
+    const faceapi = (window as any).faceapi;  
     
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
