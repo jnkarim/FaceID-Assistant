@@ -1,21 +1,25 @@
 "use client";
-import { Users, UserPlus, Search, Trash2, RefreshCw, Menu, X } from "lucide-react";
+import { Users, Search, Trash2, RefreshCw, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import RegisterPeople from "@/components/RegisterPeople";
 
+interface User {
+  name: string;
+  info?: string;
+}
+
 export default function PeoplePage() {
-  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const loadUsers = async () => {
     try {
       const response = await fetch("/api/users/people");
       if (response.ok) {
         const data = await response.json();
-        setRegisteredUsers(data.users?.map((u: any) => u.name) || []); // eslint-disable-line @typescript-eslint/no-explicit-any
+        setRegisteredUsers(data.users || []);
       }
     } catch (error) {
       console.log("No users found yet");
@@ -51,7 +55,7 @@ export default function PeoplePage() {
   }, []);
 
   const filteredUsers = registeredUsers.filter((user) =>
-    user.toLowerCase().includes(searchQuery.toLowerCase())
+    user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -68,7 +72,7 @@ export default function PeoplePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header Section - Mobile Optimized */}
+        {/* Header Section */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex-1">
@@ -90,11 +94,9 @@ export default function PeoplePage() {
           </div>
         </div>
 
-        {/* Controls Section - Mobile Optimized */}
+        {/* Controls Section */}
         <div className="bg-stone-950 border-2 border-black rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
-          {/* Mobile: Stack vertically, Desktop: Horizontal */}
           <div className="flex flex-col gap-4">
-            {/* Search Bar - Full width on mobile */}
             <div className="relative w-full">
               <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-neutral-500 w-4 h-4 sm:w-5 sm:h-5" />
               <input
@@ -106,7 +108,6 @@ export default function PeoplePage() {
               />
             </div>
 
-            {/* Action Buttons - Mobile optimized */}
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
                 onClick={handleRefresh}
@@ -128,7 +129,7 @@ export default function PeoplePage() {
           </div>
         </div>
 
-        {/* Users Grid - Mobile Optimized */}
+        {/* Users Grid */}
         <div className="bg-stone-950 border-2 border-black rounded-2xl p-4 sm:p-6">
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12 sm:py-16">
@@ -168,36 +169,40 @@ export default function PeoplePage() {
                 </h2>
               </div>
               
-              {/* Grid: 1 column mobile, 2 tablet, 3 desktop */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {filteredUsers.map((user, index) => (
                   <div
                     key={index}
                     className="group bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 hover:border-lime-400/50 rounded-xl p-4 sm:p-5 transition-all duration-200"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                        {/* Avatar - slightly smaller on mobile */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                         <div className="relative flex-shrink-0">
                           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center text-black font-bold text-lg sm:text-xl shadow-lg">
-                            {user[0].toUpperCase()}
+                            {user.name[0].toUpperCase()}
                           </div>
                         </div>
                         
-                        {/* User info - truncate on overflow */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-white font-semibold text-base sm:text-lg truncate">
-                            {user}
+                          <h3 className="text-white font-semibold text-base sm:text-lg truncate mb-1">
+                            {user.name}
                           </h3>
-                          <p className="text-neutral-400 text-xs sm:text-sm">Registered User</p>
+                          {user.info ? (
+                            <p className="text-neutral-400 text-xs sm:text-sm line-clamp-2">
+                              {user.info}
+                            </p>
+                          ) : (
+                            <p className="text-neutral-500 text-xs sm:text-sm italic">
+                              No additional info
+                            </p>
+                          )}
                         </div>
                       </div>
                       
-                      {/* Delete button - always visible on mobile, hover on desktop */}
                       <button
-                        onClick={() => deleteUser(user)}
+                        onClick={() => deleteUser(user.name)}
                         className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 rounded-lg transition-all duration-200 flex-shrink-0"
-                        title={`Delete ${user}`}
+                        title={`Delete ${user.name}`}
                       >
                         <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
@@ -209,7 +214,7 @@ export default function PeoplePage() {
           )}
         </div>
 
-        {/* Stats Footer - Mobile Optimized */}
+        {/* Stats Footer */}
         {registeredUsers.length > 0 && (
           <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-neutral-400 text-xs sm:text-sm">
             <div className="flex items-center gap-2">
