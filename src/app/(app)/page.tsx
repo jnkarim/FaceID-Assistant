@@ -448,19 +448,7 @@ export default function HomePage() {
             </span>
           </button>
 
-          <button
-            onClick={() => {
-              if (!isAuthenticated) {
-                router.push("/login");
-              }
-            }}
-            disabled={!isAuthenticated}
-            className="px-3 md:px-4 py-2 bg-lime-400 hover:bg-lime-300 text-black rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <UserPlus size={16} className="md:w-5 md:h-5" />
-            <span className="hidden sm:inline">Register New People</span>
-            <span className="sm:hidden">Register</span>
-          </button>
+
         </div>
       </div>
 
