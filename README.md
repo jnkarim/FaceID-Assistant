@@ -15,7 +15,7 @@ A web-based face recognition system that identifies and tracks individuals using
 ### Adding a New Person
 
 1. Navigate to the "Add Person" page
-2. Enter person's name
+2. Enter person's name and description
 3. Upload their photo
 4. Submit to save to database
 
