@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
     const reqBody = await request.json();
     const { firstName, lastName, email, password } = reqBody;
 
-    const user = await User.findOne({ email });
+    const existingUser = await User.findOne({ email });
 
-    if (user) {
+    if (existingUser) {
       return NextResponse.json(
-        { error: "User already exists" },
-        { status: 400 }
+        { success: false, error: "User already exists" },
+        { status: 400 },
       );
     }
 
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       authProvider: "local",
     });
 
-    // stores in mongoDB
     const savedUser = await newUser.save();
 
     const tokenData = {
@@ -46,23 +45,41 @@ export async function POST(request: NextRequest) {
       expiresIn: "7d",
     });
 
-    console.log("SIGNUP TOKEN_SECRET:", process.env.TOKEN_SECRET);
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "User created successfully",
+        user: {
+          id: savedUser._id,
+          firstName: savedUser.firstName,
+          lastName: savedUser.lastName,
+          email: savedUser.email,
+        },
+      },
+      { status: 201 },
+    );
 
-    const response = NextResponse.json({
-      status: 200,
-      message: "User created successfully",
-      success: true,
-      savedUser,
-    });
-
+    // Auth cookie
     response.cookies.set("token", token, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
+    // Mark that this request is from SIGN UP
+    response.cookies.set("justSignedUp", "true", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 10, 
+    });
+
     return response;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }

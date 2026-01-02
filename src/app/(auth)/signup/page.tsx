@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -31,24 +32,28 @@ export default function Signup() {
     e.preventDefault();
     setIsLoading(true);
 
+    const toastId = toast.loading("Creating your account...");
+
     try {
       await axios.post("/api/users/signup", formData);
-      router.push("/login");
+
+      toast.success("Account created successfully!", { id: toastId });
+      router.push("/onboarding");
     } catch (error: any) {
       console.log("Signup failed", error.message);
-      alert(error.response?.data?.error || "Signup failed");
+      const message = error.response?.data?.error || "Signup failed";
+      toast.error(message, { id: toastId });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Google OAuth Login Handler
   const login = useGoogleLogin({
-    // two objects: onSuccess & onError
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
+      const toastId = toast.loading("Signing in with Google...");
+
       try {
-        // Fetch user info from Google using the access token
         const userInfoResponse = await axios.get(
           "https://www.googleapis.com/oauth2/v3/userinfo",
           {
@@ -60,7 +65,7 @@ export default function Signup() {
 
         const googleUser = userInfoResponse.data;
 
-        await axios.post("/api/users/google-auth", {
+        const res = await axios.post("/api/users/google-auth", {
           email: googleUser.email,
           firstName: googleUser.given_name,
           lastName: googleUser.family_name,
@@ -68,18 +73,25 @@ export default function Signup() {
           profilePicture: googleUser.picture,
         });
 
-        router.push("/");
+        toast.success("Signed in successfully!", { id: toastId });
+
+        if (res.status === 201) {
+          router.push("/onboarding");
+        } else {
+          router.push("/");
+        }
       } catch (error: any) {
         console.error("Google authentication failed:", error);
-        alert("Google sign-in failed. Please try again.");
-        // finally always runs at the end, in both cases (success or error).
+        toast.error("Google sign-in failed. Please try again.", {
+          id: toastId,
+        });
       } finally {
         setIsLoading(false);
       }
     },
     onError: () => {
       console.log("Google Login Failed");
-      alert("Google sign-in failed. Please try again.");
+      toast.error("Google sign-in failed. Please try again.");
     },
   });
 
@@ -105,7 +117,7 @@ export default function Signup() {
             </div>
 
             <div className="flex flex-row justify-center items-center gap-2 mb-3">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white">
+              <h1 className="text-2xl sm:3xl lg:text-4xl font-semibold text-white">
                 Create new account
               </h1>
               <span className="w-2 h-2 bg-lime-400 rounded-full mt-1 sm:mt-2" />

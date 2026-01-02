@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 
 export interface Login {
   email: string;
@@ -33,12 +34,17 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
+    const toastId = toast.loading("Logging in...");
+
     try {
       await axios.post("/api/users/login", formData);
+      toast.success("Logged in successfully!", { id: toastId });
       router.push("/");
     } catch (error: any) {
       console.log("Login failed. Try again.", error.message);
-      alert(error.response?.data?.error || "Login failed. Please try again.");
+      const message =
+        error.response?.data?.error || "Login failed. Please try again.";
+      toast.error(message, { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +54,8 @@ export default function Login() {
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
+      const toastId = toast.loading("Signing in with Google...");
+
       try {
         const userInfoResponse = await axios.get(
           "https://www.googleapis.com/oauth2/v3/userinfo",
@@ -68,17 +76,20 @@ export default function Login() {
           profilePicture: googleUser.picture,
         });
 
-        router.push("/");
+        toast.success("Signed in successfully!", { id: toastId });
+        router.push("/onboarding");
       } catch (error: any) {
         console.error("Google authentication failed:", error);
-        alert("Google sign-in failed. Please try again.");
+        toast.error("Google sign-in failed. Please try again.", {
+          id: toastId,
+        });
       } finally {
         setIsLoading(false);
       }
     },
     onError: () => {
       console.log("Google Login Failed");
-      alert("Google sign-in failed. Please try again.");
+      toast.error("Google sign-in failed. Please try again.");
     },
   });
 

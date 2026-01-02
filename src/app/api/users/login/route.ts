@@ -28,10 +28,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Check if password exists (safety check)
     if (!user.password) {
       return NextResponse.json(
-        { error: "This account uses Google Sign-In. Please use Google to log in." },
+        {
+          error:
+            "This account uses Google Sign-In. Please use Google to log in.",
+        },
         { status: 400 }
       );
     }
@@ -39,10 +41,7 @@ export async function POST(request: NextRequest) {
     const validPassword = await bcryptjs.compare(password, user.password);
 
     if (!validPassword) {
-      return NextResponse.json(
-        { error: "Invalid password" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid password" }, { status: 400 });
     }
 
     // Generate token
@@ -68,7 +67,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set("token", token, {
       httpOnly: true,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, 
+      maxAge: 7 * 24 * 60 * 60,
     });
 
     return response;
