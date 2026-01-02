@@ -163,7 +163,10 @@ export default function HomePage() {
   };
 
   const updateRecognizedName = (name: string, info: string = "") => {
-    if (recognizedNameRef.current !== name || recognizedInfoRef.current !== info) {
+    if (
+      recognizedNameRef.current !== name ||
+      recognizedInfoRef.current !== info
+    ) {
       recognizedNameRef.current = name;
       recognizedInfoRef.current = info;
       setRecognizedName(name);
@@ -235,7 +238,9 @@ export default function HomePage() {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
       if (bestMatch.label !== "unknown") {
-        const matchedUser = registeredUsers.find((u: any) => u.name === bestMatch.label);
+        const matchedUser = registeredUsers.find(
+          (u: any) => u.name === bestMatch.label
+        );
         const userInfo = matchedUser?.info || "";
         console.log("Matched user:", matchedUser);
         console.log("User info:", userInfo);
@@ -397,10 +402,18 @@ export default function HomePage() {
 
   if (!isModelLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900">
-        <div className="text-red-400 text-xl">
-          Failed to load face recognition models. Check console for errors.
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-900 gap-4">
+        <div className="text-red-400 text-xl text-center">
+          Failed to load face recognition models.
+          <br />
+          Please check your internet connection and reload the page.
         </div>
+        <button
+          onClick={() => location.reload()}
+          className="px-4 py-2 bg-lime-400 text-black rounded-lg font-semibold"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -447,8 +460,6 @@ export default function HomePage() {
                 : "Switch to Front"}
             </span>
           </button>
-
-
         </div>
       </div>
 
@@ -574,7 +585,7 @@ export default function HomePage() {
                             Recognized
                           </span>
                         </div>
-                        
+
                         {/* Content */}
                         <div className="px-4 py-2">
                           {/* Name */}
@@ -590,7 +601,7 @@ export default function HomePage() {
                               )}
                             </div>
                           </div>
-                          
+
                           {/* Description */}
                           {recognizedInfo && (
                             <div className="border-t border-neutral-300">
