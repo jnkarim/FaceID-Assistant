@@ -68,7 +68,7 @@ export default function Login() {
           profilePicture: googleUser.picture,
         });
 
-        router.push("/");
+        router.push("/onboarding");
       } catch (error: any) {
         console.error("Google authentication failed:", error);
         alert("Google sign-in failed. Please try again.");

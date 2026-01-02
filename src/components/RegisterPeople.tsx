@@ -24,12 +24,14 @@ export default function RegisterPeople({
   const [userInfo, setUserInfo] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [message, setMessage] = useState<{ type: "" | "error" | "success" | "info"; text: string }>({
+    type: "",
+    text: "",
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // Handle image selection
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -44,17 +46,21 @@ export default function RegisterPeople({
       setSelectedImage(event.target?.result as string);
       setMessage({ type: "", text: "" });
     };
-    // turns that File into a string (data URL)
     reader.readAsDataURL(file);
   };
 
-  // Clear image
   const clearImage = () => {
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Register user
+  const closeModalAndReset = () => {
+    setShowRegisterModal(false);
+    setUserName("");
+    setUserInfo("");
+    clearImage();
+  };
+
   const registerPeople = async () => {
     if (!userName.trim()) {
       setMessage({ type: "error", text: "Please enter a name" });
@@ -79,10 +85,9 @@ export default function RegisterPeople({
     console.log("Sending data:", {
       name: userName.trim(),
       info: userInfo.trim(),
-      hasDescriptor: true
+      hasDescriptor: true,
     });
 
-    // Ensure face-api models are loaded
     const modelsOk = await loadFaceApiModels();
     if (!modelsOk) {
       setIsProcessing(false);
@@ -90,6 +95,9 @@ export default function RegisterPeople({
         type: "error",
         text: "Failed to load face recognition models. Please reload the page.",
       });
+      // close modal but keep error visible
+      closeModalAndReset();
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
     }
 
@@ -112,10 +120,12 @@ export default function RegisterPeople({
           text: "No face detected in the photo. Please try again",
         });
         setIsProcessing(false);
+        // close modal but keep error visible
+        closeModalAndReset();
+        setTimeout(() => setMessage({ type: "", text: "" }), 3000);
         return;
       }
 
-      // POST to per-user people API with info field
       await axios.post("/api/users/people", {
         name: userName.trim(),
         info: userInfo.trim(),
@@ -126,16 +136,12 @@ export default function RegisterPeople({
         type: "success",
         text: `Person "${userName}" registered successfully!`,
       });
-      setUserName("");
-      setUserInfo("");
-      clearImage();
-      setShowRegisterModal(false);
+      closeModalAndReset();
       onRegistrationComplete();
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
     } catch (error: any) {
       console.error("Registration error:", error);
 
-      // Better error handling
       let errMsg = "Registration failed";
 
       if (error.response?.status === 409) {
@@ -149,6 +155,9 @@ export default function RegisterPeople({
       }
 
       setMessage({ type: "error", text: errMsg });
+      // close modal but keep error visible
+      closeModalAndReset();
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
     }
 
     setIsProcessing(false);
@@ -165,7 +174,7 @@ export default function RegisterPeople({
         Register New People
       </button>
 
-      {/* Message */}
+      {/* Global message bar (visible even when modal is closed) */}
       {message.text && (
         <div
           className={`mt-4 p-4 rounded-lg ${
@@ -250,10 +259,7 @@ export default function RegisterPeople({
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setShowRegisterModal(false);
-                  setUserName("");
-                  setUserInfo("");
-                  clearImage();
+                  closeModalAndReset();
                   setMessage({ type: "", text: "" });
                 }}
                 className="flex-1 px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg font-medium transition"
@@ -262,7 +268,12 @@ export default function RegisterPeople({
               </button>
               <button
                 onClick={registerPeople}
-                disabled={isProcessing || !userName.trim() || !userInfo.trim() || !selectedImage}
+                disabled={
+                  isProcessing ||
+                  !userName.trim() ||
+                  !userInfo.trim() ||
+                  !selectedImage
+                }
                 className="flex-1 px-4 py-3 bg-lime-400 hover:bg-lime-300 text-black rounded-lg font-bold transition disabled:bg-neutral-600 disabled:cursor-not-allowed"
               >
                 {isProcessing ? "Processing..." : "Register"}

@@ -19,69 +19,74 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setFormData({
+    ...formData,
+    [e.target.name]: e.target.value,
+  });
+};
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  try {
+    await axios.post("/api/users/signup", formData);
+    router.push("/onboarding"); 
+  } catch (error: any) {
+    console.log("Signup failed", error.message);
+    alert(error.response?.data?.error || "Signup failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
+  const login = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
     setIsLoading(true);
-
     try {
-      await axios.post("/api/users/signup", formData);
-      router.push("/login");
+      const userInfoResponse = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        }
+      );
+
+      const googleUser = userInfoResponse.data;
+
+      const res = await axios.post("/api/users/google-auth", {
+        email: googleUser.email,
+        firstName: googleUser.given_name,
+        lastName: googleUser.family_name,
+        googleId: googleUser.sub,
+        profilePicture: googleUser.picture,
+      });
+
+      // Decide where to go based on backend status
+      if (res.status === 201) {
+        // new Google signup → onboarding
+        router.push("/onboarding");
+      } else {
+        // existing Google user → home
+        router.push("/");
+      }
     } catch (error: any) {
-      console.log("Signup failed", error.message);
-      alert(error.response?.data?.error || "Signup failed");
+      console.error("Google authentication failed:", error);
+      alert("Google sign-in failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
+  },
+  onError: () => {
+    console.log("Google Login Failed");
+    alert("Google sign-in failed. Please try again.");
+  },
+});
 
-  // Google OAuth Login Handler
-  const login = useGoogleLogin({
-    // two objects: onSuccess & onError
-    onSuccess: async (tokenResponse) => {
-      setIsLoading(true);
-      try {
-        // Fetch user info from Google using the access token
-        const userInfoResponse = await axios.get(
-          "https://www.googleapis.com/oauth2/v3/userinfo",
-          {
-            headers: {
-              Authorization: `Bearer ${tokenResponse.access_token}`,
-            },
-          }
-        );
-
-        const googleUser = userInfoResponse.data;
-
-        await axios.post("/api/users/google-auth", {
-          email: googleUser.email,
-          firstName: googleUser.given_name,
-          lastName: googleUser.family_name,
-          googleId: googleUser.sub,
-          profilePicture: googleUser.picture,
-        });
-
-        router.push("/");
-      } catch (error: any) {
-        console.error("Google authentication failed:", error);
-        alert("Google sign-in failed. Please try again.");
-        // finally always runs at the end, in both cases (success or error).
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    onError: () => {
-      console.log("Google Login Failed");
-      alert("Google sign-in failed. Please try again.");
-    },
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex flex-col">

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Check if password exists (safety check)
+
     if (!user.password) {
       return NextResponse.json(
         { error: "This account uses Google Sign-In. Please use Google to log in." },
