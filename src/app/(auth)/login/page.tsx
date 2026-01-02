@@ -68,7 +68,7 @@ export default function Login() {
 
         const googleUser = userInfoResponse.data;
 
-        await axios.post("/api/users/google-auth", {
+        const res = await axios.post("/api/users/google-auth", {
           email: googleUser.email,
           firstName: googleUser.given_name,
           lastName: googleUser.family_name,
@@ -77,7 +77,13 @@ export default function Login() {
         });
 
         toast.success("Signed in successfully!", { id: toastId });
-        router.push("/onboarding");
+
+        // route based on status (201 => new user)
+        if (res.status === 201) {
+          router.push("/onboarding");
+        } else {
+          router.push("/");
+        }
       } catch (error: any) {
         console.error("Google authentication failed:", error);
         toast.error("Google sign-in failed. Please try again.", {
