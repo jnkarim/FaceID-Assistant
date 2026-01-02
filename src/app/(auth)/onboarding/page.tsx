@@ -9,20 +9,17 @@ const steps: { id: StepId; title: string; body: string }[] = [
   {
     id: 0,
     title: "Welcome to FaceID Assistant",
-    body:
-      "This app uses your camera to detect and recognize registered faces in real time. It stores facial data in a database for instant identification.",
+    body: "This app uses your camera to detect and recognize registered faces in real time. It stores facial data in a database for instant identification.",
   },
   {
     id: 1,
     title: "Register people",
-    body:
-      "Go to the Add Person page, enter a name and description, upload a clear frontal photo, and save to store them in the database.",
+    body: "Go to the Add Person page, enter a name and description, upload a clear frontal photo, and save to store them in the database.",
   },
   {
     id: 2,
     title: "Run recognition",
-    body:
-      "On the Home page, allow camera access. The system will automatically detect faces and show recognition results directly on the video feed.",
+    body: "On the Home page, allow camera access. The system will automatically detect faces and show recognition results directly on the video feed.",
   },
 ];
 
@@ -71,7 +68,7 @@ export default function OnboardingPage() {
             opacity: 1;
           }
         }
-        
+
         @keyframes slideIn {
           from {
             opacity: 0;
@@ -82,11 +79,11 @@ export default function OnboardingPage() {
             transform: translateX(0);
           }
         }
-        
+
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out forwards;
         }
-        
+
         .animate-slideIn {
           opacity: 0;
           animation: slideIn 0.5s ease-out forwards;
@@ -101,41 +98,69 @@ export default function OnboardingPage() {
                 key={s.id}
                 className={[
                   "h-1.5 sm:h-2 rounded-full transition-all",
-                  index === step ? "w-6 sm:w-8 bg-lime-400" : "w-2 sm:w-2.5 bg-neutral-700",
+                  index === step
+                    ? "w-6 sm:w-8 bg-lime-400"
+                    : "w-2 sm:w-2.5 bg-neutral-700",
                 ].join(" ")}
               />
             ))}
           </div>
 
           {/* Card */}
-          <div 
+          <div
             className={`rounded-2xl sm:rounded-3xl border border-neutral-700 bg-neutral-900 p-6 sm:p-8 md:p-10 shadow-2xl transition-all duration-300 ${
-              isAnimating ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+              isAnimating
+                ? "opacity-0 translate-y-4"
+                : "opacity-100 translate-y-0"
             }`}
           >
             <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-lime-400 mb-2 sm:mb-3 font-semibold">
               Step {step + 1} of {steps.length}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-white">{currentStep.title}</h1>
-            <p className="text-sm sm:text-base text-neutral-100 mb-6 sm:mb-8 leading-relaxed">{currentStep.body}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-white">
+              {currentStep.title}
+            </h1>
+            <p className="text-sm sm:text-base text-neutral-100 mb-6 sm:mb-8 leading-relaxed">
+              {currentStep.body}
+            </p>
 
             {/* Extra bullets for some steps */}
             {step === 1 && (
               <ul className="mb-6 sm:mb-8 space-y-2 sm:space-y-3 text-xs sm:text-sm text-neutral-100 animate-fadeIn">
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.1s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.1s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Navigate to {"Add Person"}.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.2s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.2s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Enter name and description.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.3s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.3s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Upload a clear face image.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.4s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.4s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Click save to store in database.</span>
                 </li>
               </ul>
@@ -143,20 +168,40 @@ export default function OnboardingPage() {
 
             {step === 2 && (
               <ul className="mb-6 sm:mb-8 space-y-2 sm:space-y-3 text-xs sm:text-sm text-neutral-100 animate-fadeIn">
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.1s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.1s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Open the Home page.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.2s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.2s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Allow camera access in the browser prompt.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.3s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.3s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Wait a moment for detection and recognition.</span>
                 </li>
-                <li className="flex items-start gap-2 sm:gap-3 animate-slideIn" style={{ animationDelay: "0.4s" }}>
-                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">→</span>
+                <li
+                  className="flex items-start gap-2 sm:gap-3 animate-slideIn"
+                  style={{ animationDelay: "0.4s" }}
+                >
+                  <span className="text-lime-400 mt-0.5 flex-shrink-0 font-bold">
+                    →
+                  </span>
                   <span>Recognized names appear on top of the video feed.</span>
                 </li>
               </ul>

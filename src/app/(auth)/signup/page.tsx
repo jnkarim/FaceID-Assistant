@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,74 +20,80 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setFormData({
-    ...formData,
-    [e.target.name]: e.target.value,
-  });
-};
 
-const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-  try {
-    await axios.post("/api/users/signup", formData);
-    router.push("/onboarding"); 
-  } catch (error: any) {
-    console.log("Signup failed", error.message);
-    alert(error.response?.data?.error || "Signup failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-
-  const login = useGoogleLogin({
-  onSuccess: async (tokenResponse) => {
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+
+    const toastId = toast.loading("Creating your account...");
+
     try {
-      const userInfoResponse = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        }
-      );
+      await axios.post("/api/users/signup", formData);
 
-      const googleUser = userInfoResponse.data;
-
-      const res = await axios.post("/api/users/google-auth", {
-        email: googleUser.email,
-        firstName: googleUser.given_name,
-        lastName: googleUser.family_name,
-        googleId: googleUser.sub,
-        profilePicture: googleUser.picture,
-      });
-
-      // Decide where to go based on backend status
-      if (res.status === 201) {
-        // new Google signup → onboarding
-        router.push("/onboarding");
-      } else {
-        // existing Google user → home
-        router.push("/");
-      }
+      toast.success("Account created successfully!", { id: toastId });
+      router.push("/onboarding");
     } catch (error: any) {
-      console.error("Google authentication failed:", error);
-      alert("Google sign-in failed. Please try again.");
+      console.log("Signup failed", error.message);
+      const message = error.response?.data?.error || "Signup failed";
+      toast.error(message, { id: toastId });
     } finally {
       setIsLoading(false);
     }
-  },
-  onError: () => {
-    console.log("Google Login Failed");
-    alert("Google sign-in failed. Please try again.");
-  },
-});
+  };
 
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      const toastId = toast.loading("Signing in with Google...");
+
+      try {
+        const userInfoResponse = await axios.get(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${tokenResponse.access_token}`,
+            },
+          }
+        );
+
+        const googleUser = userInfoResponse.data;
+
+        const res = await axios.post("/api/users/google-auth", {
+          email: googleUser.email,
+          firstName: googleUser.given_name,
+          lastName: googleUser.family_name,
+          googleId: googleUser.sub,
+          profilePicture: googleUser.picture,
+        });
+
+        toast.success("Signed in successfully!", { id: toastId });
+
+        if (res.status === 201) {
+          router.push("/onboarding");
+        } else {
+          router.push("/");
+        }
+      } catch (error: any) {
+        console.error("Google authentication failed:", error);
+        toast.error("Google sign-in failed. Please try again.", {
+          id: toastId,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    onError: () => {
+      console.log("Google Login Failed");
+      toast.error("Google sign-in failed. Please try again.");
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex flex-col">
@@ -110,7 +117,7 @@ const handleSubmit = async (e: FormEvent) => {
             </div>
 
             <div className="flex flex-row justify-center items-center gap-2 mb-3">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white">
+              <h1 className="text-2xl sm:3xl lg:text-4xl font-semibold text-white">
                 Create new account
               </h1>
               <span className="w-2 h-2 bg-lime-400 rounded-full mt-1 sm:mt-2" />

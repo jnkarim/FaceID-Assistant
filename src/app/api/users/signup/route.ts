@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 10, // 10 minutes is enough for onboarding
+      maxAge: 60 * 10, 
     });
 
     return response;
