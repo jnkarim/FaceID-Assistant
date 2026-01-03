@@ -4,7 +4,6 @@
 import {
   Camera,
   Info,
-  CheckCircle,
   UserPlus,
   Video,
   Scan,
@@ -15,7 +14,8 @@ import { useRef, useState, useEffect } from "react";
 import { loadFaceApiModels } from "@/lib/faceapi";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import RegisterPeople from "@/components/RegisterPeople";
+import FaceIdGuide from "@/components/FaceIdGuide";
+import FaceIdHeader from "@/components/FaceIdHeader";
 
 declare global {
   interface Window {
@@ -422,145 +422,19 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-4 md:p-8">
       <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col">
         {/* Header */}
-        <header className="w-full mb-6 md:mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
-                FaceID <span className="text-lime-400">Assistant</span>
-              </h1>
-              <p className="text-neutral-400 text-sm md:text-base mt-1">
-                Real-time face recognition for secure access and monitoring.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <button
-                onClick={() => setShowGuide(!showGuide)}
-                className="px-3 md:px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base"
-              >
-                <Info size={16} className="md:w-5 md:h-5" />
-                <span className="hidden sm:inline">
-                  {showGuide ? "Hide Guide" : "Show Guide"}
-                </span>
-                <span className="sm:hidden">
-                  {showGuide ? "Hide" : "Guide"}
-                </span>
-              </button>
-
-              {isAuthenticated && (
-                <RegisterPeople
-                  onRegistrationComplete={() => {
-                    console.log("User registered from home page!");
-                    loadUsers();
-                  }}
-                />
-              )}
-
-              {/* Mobile camera switch */}
-              <button
-                type="button"
-                onClick={handleCameraSwitch}
-                disabled={
-                  !isCameraActive || isSwitchingCamera || !isAuthenticated
-                }
-                className="px-3 md:px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <RefreshCw
-                  size={16}
-                  className={isSwitchingCamera ? "animate-spin" : ""}
-                />
-                <span>
-                  {isSwitchingCamera
-                    ? "Switching..."
-                    : cameraFacingMode === "user"
-                    ? "Back Camera"
-                    : "Front Camera"}
-                </span>
-              </button>
-            </div>
-          </div>
-        </header>
+        <FaceIdHeader
+          showGuide={showGuide}
+          setShowGuide={setShowGuide}
+          isAuthenticated={isAuthenticated}
+          isCameraActive={isCameraActive}
+          isSwitchingCamera={isSwitchingCamera}
+          cameraFacingMode={cameraFacingMode}
+          onCameraSwitch={handleCameraSwitch}
+          onRegistrationComplete={loadUsers}
+        />
 
         {/* Guide */}
-        {showGuide && (
-          <div className="max-w-4xl mx-auto mb-6 md:mb-8 w-full">
-            <div className="bg-neutral-950/80 border border-neutral-800 rounded-2xl p-4 md:p-6 shadow-lg">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-lime-400 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Info className="w-4 h-4 md:w-5 md:h-5 text-black" />
-                </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-bold text-white mb-1.5">
-                    How to Use FaceID Assistant
-                  </h3>
-                  <p className="text-sm md:text-base text-neutral-300">
-                    Follow these simple steps to get started with face
-                    recognition.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-2">
-                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
-                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                      1
-                    </div>
-                    <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                  </div>
-                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                    Register Users
-                  </h4>
-                  <p className="text-neutral-300 text-xs md:text-sm">
-                    Click the Register New People button, enter a name, and
-                    capture the face to save a new profile.
-                  </p>
-                </div>
-
-                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
-                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                      2
-                    </div>
-                    <Video className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                  </div>
-                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                    Start Camera
-                  </h4>
-                  <p className="text-neutral-300 text-xs md:text-sm">
-                    Click Start Camera to activate the webcam. Use the switch
-                    button to toggle between front and back cameras on mobile.
-                  </p>
-                </div>
-
-                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
-                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                      3
-                    </div>
-                    <Scan className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                  </div>
-                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                    Get Recognized
-                  </h4>
-                  <p className="text-neutral-300 text-xs md:text-sm">
-                    Look at the camera and the system will automatically
-                    identify registered users in real time.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-start gap-2 text-xs md:text-sm text-neutral-400">
-                <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-lime-400 mt-[2px]" />
-                <p>
-                  <span className="font-semibold text-lime-300">Pro tip:</span>{" "}
-                  Good lighting, a front-facing pose, and standing 2–3 feet from
-                  the camera will improve recognition accuracy. Green box =
-                  recognized, red box = unknown.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <FaceIdGuide showGuide={showGuide} />
 
         {/* Camera Content */}
         <div className="flex-1 overflow-auto">
@@ -716,7 +590,6 @@ export default function HomePage() {
                       </>
                     )}
                   </button>
-
                 </div>
               </div>
             </div>
