@@ -440,7 +440,7 @@ export default function HomePage() {
         <div className="flex-1 overflow-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-stone-950 border border-neutral-800 rounded-2xl overflow-hidden mb-6 md:mb-8 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
-              {/* NOTE: wrapper now mirrors when front camera is active */}
+              {/* Camera wrapper: mirror when using front camera */}
               <div
                 className={`relative bg-black flex items-center justify-center h-[68vh] sm:aspect-video ${
                   cameraFacingMode === "user" ? "scale-x-[-1]" : ""
