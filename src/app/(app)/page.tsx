@@ -445,7 +445,7 @@ export default function HomePage() {
 
                 {isCameraActive && isAuthenticated ? (
                   <>
-                    {/* Mirror only video + canvas for front camera */}
+                    {/* Mirror only the video for front camera */}
                     <video
                       ref={videoRef}
                       autoPlay
@@ -455,11 +455,10 @@ export default function HomePage() {
                         cameraFacingMode === "user" ? "scale-x-[-1]" : ""
                       }`}
                     />
+                    {/* Canvas NOT mirrored so text is not reversed */}
                     <canvas
                       ref={canvasRef}
-                      className={`absolute inset-0 w-full h-full mix-blend-lighten ${
-                        cameraFacingMode === "user" ? "scale-x-[-1]" : ""
-                      }`}
+                      className="absolute inset-0 w-full h-full mix-blend-lighten"
                     />
 
                     {isSwitchingCamera && (
@@ -556,7 +555,7 @@ export default function HomePage() {
 
               {/* Control bar */}
               <div className="p-4 md:p-5 bg-black/70 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs md:text-sm text-neutral-400">
+                <div className="flex items(center gap-2 text-xs md:text-sm text-neutral-400">
                   <div
                     className={`w-2 h-2 rounded-full ${
                       isCameraActive && isAuthenticated
