@@ -15,6 +15,7 @@ import { useRef, useState, useEffect } from "react";
 import { loadFaceApiModels } from "@/lib/faceapi";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import RegisterPeople from "@/components/RegisterPeople";
 
 declare global {
   interface Window {
@@ -29,7 +30,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [recognizedName, setRecognizedName] = useState("");
-  const [recognizedInfo, setRecognizedInfo] = useState(""); // New state for user info
+  const [recognizedInfo, setRecognizedInfo] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [showLightWarning, setShowLightWarning] = useState(false);
   const [cameraFacingMode, setCameraFacingMode] = useState<
@@ -44,7 +45,7 @@ export default function HomePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recognizedNameRef = useRef("");
-  const recognizedInfoRef = useRef(""); // New ref for user info
+  const recognizedInfoRef = useRef("");
   const lastDetectionTimeRef = useRef<number>(Date.now());
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -54,7 +55,7 @@ export default function HomePage() {
       try {
         await axios.get("/api/users/me");
         setIsAuthenticated(true);
-      } catch (error: any) {
+      } catch {
         setIsAuthenticated(false);
       } finally {
         setCheckingAuth(false);
@@ -70,7 +71,7 @@ export default function HomePage() {
         const data = await response.json();
         setRegisteredUsers(data.users || []);
       }
-    } catch (error) {
+    } catch {
       console.log("No users found yet");
     }
   };
@@ -207,8 +208,6 @@ export default function HomePage() {
         .withFaceDescriptor();
 
       if (!detection) {
-        // Don't clear the recognized name - keep it visible
-        // Only clear the canvas
         clearCanvas();
 
         const timeSinceLastDetection =
@@ -242,8 +241,6 @@ export default function HomePage() {
           (u: any) => u.name === bestMatch.label
         );
         const userInfo = matchedUser?.info || "";
-        console.log("Matched user:", matchedUser);
-        console.log("User info:", userInfo);
         updateRecognizedName(bestMatch.label, userInfo);
         drawDetection(detection, bestMatch.label, video);
       } else {
@@ -319,13 +316,13 @@ export default function HomePage() {
     const willBeActive = !isCameraActive;
     setIsCameraActive(willBeActive);
     if (!willBeActive) {
-      // Only clear when stopping camera
       setRecognizedName("");
       setRecognizedInfo("");
       recognizedNameRef.current = "";
       recognizedInfoRef.current = "";
       setShowLightWarning(false);
       setCameraError("");
+      stopCamera();
     } else {
       loadUsers();
       lastDetectionTimeRef.current = Date.now();
@@ -356,7 +353,7 @@ export default function HomePage() {
     return () => {
       stopCamera();
     };
-  }, [isCameraActive, isAuthenticated]);
+  }, [isCameraActive, isAuthenticated, cameraFacingMode]);
 
   useEffect(() => {
     if (
@@ -393,7 +390,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-lime-400 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-lime-400 border-t-transparent rounded-full animate-spin" />
           <div className="text-white text-xl">Loading AI models...</div>
         </div>
       </div>
@@ -418,299 +415,348 @@ export default function HomePage() {
     );
   }
 
+  const overlayBase =
+    "px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center shadow-lg";
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 p-4 md:p-8">
-      {/* Header */}
-      <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 border-b pb-4 md:pb-6 border-neutral-700 gap-4">
-        <div className="flex flex-col items-start">
-          <div className="text-2xl md:text-3xl text-white font-semibold">
-            FaceID Assistant
-          </div>
-          <div className="text-base md:text-lg text-neutral-400">
-            Smart Recognition System
-          </div>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-          <button
-            onClick={() => setShowGuide(!showGuide)}
-            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base"
-          >
-            <Info size={16} className="md:w-5 md:h-5" />
-            <span className="hidden sm:inline">
-              {showGuide ? "Hide Guide" : "Show Guide"}
-            </span>
-            <span className="sm:hidden">{showGuide ? "Hide" : "Guide"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCameraSwitch}
-            disabled={!isCameraActive || isSwitchingCamera || !isAuthenticated}
-            className="px-3 md:px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw
-              size={16}
-              className={isSwitchingCamera ? "animate-spin" : ""}
-            />
-            <span>
-              {isSwitchingCamera
-                ? "Switching..."
-                : cameraFacingMode === "user"
-                ? "Switch to Back"
-                : "Switch to Front"}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Guide */}
-      {showGuide && (
-        <div className="max-w-4xl mx-auto mb-6 md:mb-8 w-full">
-          <div className="bg-black border-2 border-lime-400/30 rounded-2xl p-4 md:p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-lime-400 rounded-full flex items-center justify-center flex-shrink-0">
-                <Info className="w-4 h-4 md:w-5 md:h-5 text-black" />
-              </div>
-              <div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                  How to Use FaceID Assistant
-                </h3>
-                <p className="text-sm md:text-base text-neutral-300 mb-4">
-                  Follow these simple steps to get started with face recognition
-                </p>
-              </div>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-4 md:p-8">
+      <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col">
+        {/* Header */}
+        <header className="w-full mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
+                FaceID <span className="text-lime-400">Assistant</span>
+              </h1>
+              <p className="text-neutral-400 text-sm md:text-base mt-1">
+                Real-time face recognition for secure access and monitoring.
+              </p>
             </div>
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                className="px-3 md:px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base"
+              >
+                <Info size={16} className="md:w-5 md:h-5" />
+                <span className="hidden sm:inline">
+                  {showGuide ? "Hide Guide" : "Show Guide"}
+                </span>
+                <span className="sm:hidden">
+                  {showGuide ? "Hide" : "Guide"}
+                </span>
+              </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-              <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                    1
-                  </div>
-                  <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                  Register Users
-                </h4>
-                <p className="text-neutral-400 text-xs md:text-sm">
-                  Click Register New People button, enter a name, and capture
-                  your face.
-                </p>
-              </div>
-
-              <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                    2
-                  </div>
-                  <Video className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                  Start Camera
-                </h4>
-                <p className="text-neutral-400 text-xs md:text-sm">
-                  Click Start Camera to activate the webcam. Use the switch
-                  button to change between front/back cameras on mobile.
-                </p>
-              </div>
-
-              <div className="bg-neutral-800/50 rounded-xl p-3 md:p-4 border border-neutral-700">
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
-                    3
-                  </div>
-                  <Scan className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
-                </div>
-                <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
-                  Get Recognized
-                </h4>
-                <p className="text-neutral-400 text-xs md:text-sm">
-                  Look at the camera and the system will automatically identify
-                  registered users.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 md:mt-4 p-3 md:p-4 bg-neutral-800/30 rounded-lg border border-neutral-700/50">
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-lime-400 flex-shrink-0 mt-0.5" />
-                <div className="text-xs md:text-sm text-neutral-300">
-                  <span className="font-semibold text-white">Pro Tips:</span>{" "}
-                  Use good lighting, face the camera directly, and stay 2-3 feet
-                  away for optimal recognition. Green box = recognized user, Red
-                  box = unknown person.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Camera Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-stone-950 border-2 border-black rounded-2xl overflow-hidden mb-6 md:mb-8">
-            <div className="relative bg-black flex items-center justify-center h-[70vh] sm:aspect-video">
-              {isCameraActive && isAuthenticated ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute inset-0 w-full h-full"
-                  />
-                  {isSwitchingCamera && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <RefreshCw className="w-12 h-12 text-lime-400 animate-spin" />
-                        <div className="text-white font-semibold">
-                          Switching camera...
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {recognizedName && !isSwitchingCamera && (
-                    <div className="absolute top-4 left-4 right-4 md:right-auto md:max-w-sm">
-                      {/* Professional Card Design */}
-                      <div className="bg-white/95 backdrop-blur-md rounded-lg shadow-lg border border-neutral-200 overflow-hidden">
-                        {/* Header with Status */}
-                        <div className="bg-amber-500 px-4 py-2 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                          <span className="text-white text-xs font-semibold uppercase tracking-wide">
-                            Recognized
-                          </span>
-                        </div>
-
-                        {/* Content */}
-                        <div className="px-4 py-2">
-                          {/* Name */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex-1">
-                              <h3 className="text-md font-bold text-neutral-800 leading-tight">
-                                {recognizedName}
-                              </h3>
-                              {recognizedInfo && (
-                                <p className="text-xs text-neutral-500">
-                                  Profile Information
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Description */}
-                          {recognizedInfo && (
-                            <div className="border-t border-neutral-300">
-                              <p className="text-sm text-neutral-700 leading-relaxed">
-                                {recognizedInfo}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {cameraError && (
-                    <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm max-w-[200px]">
-                      {cameraError}
-                    </div>
-                  )}
-                  {registeredUsers.length === 0 && (
-                    <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center">
-                      <Info size={14} className="md:w-4 md:h-4 flex-shrink-0" />
-                      <span>
-                        No users registered yet. Please register a user first!
-                      </span>
-                    </div>
-                  )}
-                  {showLightWarning &&
-                    registeredUsers.length > 0 &&
-                    !isSwitchingCamera && (
-                      <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-medium text-xs md:text-sm flex items-center gap-2 max-w-[90%] text-center animate-pulse">
-                        <Info
-                          size={14}
-                          className="md:w-4 md:h-4 flex-shrink-0"
-                        />
-                        <span>Put your face in more light</span>
-                      </div>
-                    )}
-                </>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 md:gap-6 p-4">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-neutral-800 rounded-full flex items-center justify-center">
-                    {!isAuthenticated ? (
-                      <Lock className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
-                    ) : (
-                      <Camera className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-neutral-400 text-lg md:text-xl mb-2">
-                      {!isAuthenticated ? "Login Required" : "Camera Inactive"}
-                    </div>
-                    <p className="text-neutral-500 text-xs md:text-sm">
-                      {!isAuthenticated
-                        ? "Please login to use face recognition features"
-                        : "Click Start Camera to begin face recognition"}
-                    </p>
-                  </div>
-                </div>
+              {isAuthenticated && (
+                <RegisterPeople
+                  onRegistrationComplete={() => {
+                    console.log("User registered from home page!");
+                    loadUsers();
+                  }}
+                />
               )}
-            </div>
-            <div className="p-4 md:p-6 bg-black/60 border-t border-lime-500/20 flex justify-center">
+
+              {/* Mobile camera switch */}
               <button
                 type="button"
-                onClick={handleCameraToggle}
-                className="w-full px-4 md:px-6 py-3 md:py-4 bg-lime-400 hover:bg-lime-300 transition text-black text-base md:text-lg rounded-xl font-bold flex items-center justify-center gap-2"
+                onClick={handleCameraSwitch}
+                disabled={
+                  !isCameraActive || isSwitchingCamera || !isAuthenticated
+                }
+                className="px-3 md:px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white rounded-xl font-medium transition flex items-center gap-2 text-sm md:text-base md:hidden disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {!isAuthenticated ? (
-                  <>
-                    <Lock className="w-4 h-4 md:w-5 md:h-5" />
-                    Login to Use Camera
-                  </>
-                ) : isCameraActive ? (
-                  <>
-                    <Video className="w-4 h-4 md:w-5 md:h-5" />
-                    Stop Camera
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
-                    Start Camera
-                  </>
-                )}
+                <RefreshCw
+                  size={16}
+                  className={isSwitchingCamera ? "animate-spin" : ""}
+                />
+                <span>
+                  {isSwitchingCamera
+                    ? "Switching..."
+                    : cameraFacingMode === "user"
+                    ? "Back Camera"
+                    : "Front Camera"}
+                </span>
               </button>
             </div>
           </div>
+        </header>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6 md:mb-8">
-            <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-2xl md:text-3xl font-bold text-lime-400">
-                {registeredUsers.length}
+        {/* Guide */}
+        {showGuide && (
+          <div className="max-w-4xl mx-auto mb-6 md:mb-8 w-full">
+            <div className="bg-neutral-950/80 border border-neutral-800 rounded-2xl p-4 md:p-6 shadow-lg">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-lime-400 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Info className="w-4 h-4 md:w-5 md:h-5 text-black" />
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-1.5">
+                    How to Use FaceID Assistant
+                  </h3>
+                  <p className="text-sm md:text-base text-neutral-300">
+                    Follow these simple steps to get started with face
+                    recognition.
+                  </p>
+                </div>
               </div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">
-                Registered Users
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-2">
+                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
+                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
+                      1
+                    </div>
+                    <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
+                  </div>
+                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                    Register Users
+                  </h4>
+                  <p className="text-neutral-300 text-xs md:text-sm">
+                    Click the Register New People button, enter a name, and
+                    capture the face to save a new profile.
+                  </p>
+                </div>
+
+                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
+                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
+                      2
+                    </div>
+                    <Video className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
+                  </div>
+                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                    Start Camera
+                  </h4>
+                  <p className="text-neutral-300 text-xs md:text-sm">
+                    Click Start Camera to activate the webcam. Use the switch
+                    button to toggle between front and back cameras on mobile.
+                  </p>
+                </div>
+
+                <div className="bg-neutral-900/70 rounded-xl p-3 md:p-4 border border-neutral-800">
+                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                    <div className="w-6 h-6 md:w-8 md:h-8 bg-lime-400 rounded-full flex items-center justify-center text-black font-bold text-sm md:text-base">
+                      3
+                    </div>
+                    <Scan className="w-4 h-4 md:w-5 md:h-5 text-lime-400" />
+                  </div>
+                  <h4 className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">
+                    Get Recognized
+                  </h4>
+                  <p className="text-neutral-300 text-xs md:text-sm">
+                    Look at the camera and the system will automatically
+                    identify registered users in real time.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-2 text-xs md:text-sm text-neutral-400">
+                <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-lime-400 mt-[2px]" />
+                <p>
+                  <span className="font-semibold text-lime-300">Pro tip:</span>{" "}
+                  Good lighting, a front-facing pose, and standing 2–3 feet from
+                  the camera will improve recognition accuracy. Green box =
+                  recognized, red box = unknown.
+                </p>
               </div>
             </div>
-            <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-xl md:text-3xl font-bold text-blue-400">
-                {isCameraActive && isAuthenticated ? "Active" : "Off"}
+          </div>
+        )}
+
+        {/* Camera Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-stone-950 border border-neutral-800 rounded-2xl overflow-hidden mb-6 md:mb-8 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
+              <div className="relative bg-black flex items-center justify-center h-[68vh] sm:aspect-video">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_60%,rgba(0,0,0,0.7)_100%)]" />
+
+                {isCameraActive && isAuthenticated ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="absolute inset-0 w-full h-full object-cover brightness-110 contrast-105"
+                    />
+                    <canvas
+                      ref={canvasRef}
+                      className="absolute inset-0 w-full h-full mix-blend-lighten"
+                    />
+
+                    {isSwitchingCamera && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <RefreshCw className="w-12 h-12 text-lime-400 animate-spin" />
+                          <div className="text-white font-semibold">
+                            Switching camera...
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {recognizedName && !isSwitchingCamera && (
+                      <div className="absolute bottom-4 left-4 w-[min(260px,80%)]">
+                        <div className="bg-neutral-900/90 backdrop-blur-md rounded-xl border border-lime-400/40 shadow-lg overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-lime-400 to-emerald-400">
+                            <span className="w-2 h-2 bg-black rounded-full animate-pulse" />
+                            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-black">
+                              Recognized
+                            </span>
+                          </div>
+                          <div className="px-3 py-2.5">
+                            <h3 className="text-sm font-semibold text-white truncate">
+                              {recognizedName}
+                            </h3>
+                            {recognizedInfo && (
+                              <p className="mt-1 text-xs text-neutral-300 line-clamp-3">
+                                {recognizedInfo}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {cameraError && (
+                      <div
+                        className={`absolute top-3 right-3 bg-red-500/90 text-white ${overlayBase}`}
+                      >
+                        <Info size={14} className="flex-shrink-0" />
+                        <span>{cameraError}</span>
+                      </div>
+                    )}
+
+                    {registeredUsers.length === 0 && (
+                      <div
+                        className={`absolute bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400/95 text-black ${overlayBase}`}
+                      >
+                        <Info size={14} className="flex-shrink-0" />
+                        <span>
+                          No users registered yet. Please register a user first.
+                        </span>
+                      </div>
+                    )}
+
+                    {showLightWarning &&
+                      registeredUsers.length > 0 &&
+                      !isSwitchingCamera && (
+                        <div
+                          className={`absolute bottom-3 left-1/2 -translate-x-1/2 bg-orange-500/90 text-white ${overlayBase} animate-pulse`}
+                        >
+                          <Info size={14} className="flex-shrink-0" />
+                          <span>
+                            Move to better lighting for clearer recognition.
+                          </span>
+                        </div>
+                      )}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 md:gap-6 p-4">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-neutral-800 rounded-full flex items-center justify-center">
+                      {!isAuthenticated ? (
+                        <Lock className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
+                      ) : (
+                        <Camera className="w-8 h-8 md:w-10 md:h-10 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <div className="text-neutral-300 text-lg md:text-xl mb-2">
+                        {!isAuthenticated
+                          ? "Login Required"
+                          : "Camera Inactive"}
+                      </div>
+                      <p className="text-neutral-500 text-xs md:text-sm">
+                        {!isAuthenticated
+                          ? "Please login to use face recognition features."
+                          : "Click Start Camera to begin face recognition."}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">
-                Camera Status
+
+              {/* Control bar */}
+              <div className="p-4 md:p-5 bg-black/70 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs md:text-sm text-neutral-400">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      isCameraActive && isAuthenticated
+                        ? "bg-lime-400 animate-pulse"
+                        : "bg-neutral-600"
+                    }`}
+                  />
+                  <span>
+                    {isCameraActive && isAuthenticated
+                      ? "Camera live • Face recognition running"
+                      : "Camera idle"}
+                  </span>
+                </div>
+
+                <div className="flex w-full sm:w-auto gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCameraToggle}
+                    className="flex-1 sm:flex-initial px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-semibold text-sm md:text-base
+                               bg-lime-400 text-black hover:bg-lime-300 transition flex items-center justify-center gap-2"
+                  >
+                    {!isAuthenticated ? (
+                      <>
+                        <Lock className="w-4 h-4 md:w-5 md:h-5" />
+                        Login to Use Camera
+                      </>
+                    ) : isCameraActive ? (
+                      <>
+                        <Video className="w-4 h-4 md:w-5 md:h-5" />
+                        Stop Camera
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4 md:w-5 md:h-5" />
+                        Start Camera
+                      </>
+                    )}
+                  </button>
+
+                </div>
               </div>
             </div>
-            <div className="bg-stone-950 border-2 border-black rounded-xl p-3 md:p-4 text-center">
-              <div className="text-2xl md:text-3xl font-bold text-purple-400">
-                {recognizedName ? "✓" : "—"}
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6 md:mb-8">
+              <div className="bg-stone-950 border border-neutral-800 rounded-xl p-3 md:p-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                    Registered
+                  </span>
+                  <UserPlus className="w-4 h-4 text-lime-400" />
+                </div>
+                <div className="text-2xl md:text-3xl font-semibold text-lime-300">
+                  {registeredUsers.length}
+                </div>
               </div>
-              <div className="text-neutral-400 text-xs md:text-sm mt-1">
-                Detection Status
+
+              <div className="bg-stone-950 border border-neutral-800 rounded-xl p-3 md:p-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                    Camera
+                  </span>
+                  <Video className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="text-xl md:text-3xl font-semibold text-blue-300">
+                  {isCameraActive && isAuthenticated ? "Active" : "Off"}
+                </div>
+              </div>
+
+              <div className="bg-stone-950 border border-neutral-800 rounded-xl p-3 md:p-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                    Detection
+                  </span>
+                  <Scan className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="text-2xl md:text-3xl font-semibold text-purple-300">
+                  {recognizedName ? "✓" : "—"}
+                </div>
               </div>
             </div>
           </div>
