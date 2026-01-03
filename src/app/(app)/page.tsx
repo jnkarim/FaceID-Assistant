@@ -440,26 +440,26 @@ export default function HomePage() {
         <div className="flex-1 overflow-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-stone-950 border border-neutral-800 rounded-2xl overflow-hidden mb-6 md:mb-8 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
-              {/* Camera wrapper: mirror when using front camera */}
-              <div
-                className={`relative bg-black flex items-center justify-center h-[68vh] sm:aspect-video ${
-                  cameraFacingMode === "user" ? "scale-x-[-1]" : ""
-                }`}
-              >
+              <div className="relative bg-black flex items-center justify-center h-[68vh] sm:aspect-video">
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_60%,rgba(0,0,0,0.7)_100%)]" />
 
                 {isCameraActive && isAuthenticated ? (
                   <>
+                    {/* Mirror only video + canvas for front camera */}
                     <video
                       ref={videoRef}
                       autoPlay
                       playsInline
                       muted
-                      className="absolute inset-0 w-full h-full object-cover brightness-110 contrast-105"
+                      className={`absolute inset-0 w-full h-full object-cover brightness-110 contrast-105 ${
+                        cameraFacingMode === "user" ? "scale-x-[-1]" : ""
+                      }`}
                     />
                     <canvas
                       ref={canvasRef}
-                      className="absolute inset-0 w-full h-full mix-blend-lighten"
+                      className={`absolute inset-0 w-full h-full mix-blend-lighten ${
+                        cameraFacingMode === "user" ? "scale-x-[-1]" : ""
+                      }`}
                     />
 
                     {isSwitchingCamera && (
