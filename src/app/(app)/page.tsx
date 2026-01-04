@@ -440,7 +440,7 @@ export default function HomePage() {
         <div className="flex-1 overflow-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-stone-950 border border-neutral-800 rounded-2xl overflow-hidden mb-6 md:mb-8 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
-              <div className="relative bg-black flex items-center justify-center h-[68vh] sm:aspect-video">
+              <div className="relative bg-black flex items-center justify-center aspect-video">
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_60%,rgba(0,0,0,0.7)_100%)]" />
 
                 {isCameraActive && isAuthenticated ? (
@@ -474,19 +474,13 @@ export default function HomePage() {
 
                     {recognizedName && !isSwitchingCamera && (
                       <div className="absolute bottom-4 left-4 w-[min(260px,80%)]">
-                        <div className="bg-neutral-900/90 backdrop-blur-md rounded-xl border border-lime-400/40 shadow-lg overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-lime-400 to-emerald-400">
-                            <span className="w-2 h-2 bg-black rounded-full animate-pulse" />
-                            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-black">
-                              Recognized
-                            </span>
-                          </div>
+                        <div className="bg-gradient-to-r from-lime-400 to-emerald-400 backdrop-blur-md rounded-xl border border-lime-400/40 shadow-lg overflow-hidden">
                           <div className="px-3 py-2.5">
-                            <h3 className="text-sm font-semibold text-white truncate">
+                            <h3 className="text-sm font-semibold text-black truncate">
                               {recognizedName}
                             </h3>
                             {recognizedInfo && (
-                              <p className="mt-1 text-xs text-neutral-300 line-clamp-3">
+                              <p className="mt-1 text-xs text-neutral-800 line-clamp-3">
                                 {recognizedInfo}
                               </p>
                             )}
