@@ -40,6 +40,7 @@ export default function HomePage() {
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,6 +49,16 @@ export default function HomePage() {
   const recognizedInfoRef = useRef("");
   const lastDetectionTimeRef = useRef<number>(Date.now());
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Detect if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Check authentication
   useEffect(() => {
@@ -84,6 +95,19 @@ export default function HomePage() {
 
     setCameraError("");
 
+    // Adjust resolution based on device type
+    const videoConstraints = isMobile
+      ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          facingMode: { exact: facingMode },
+        }
+      : {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          facingMode: { exact: facingMode },
+        };
+
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -91,11 +115,7 @@ export default function HomePage() {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          facingMode: { exact: facingMode },
-        },
+        video: videoConstraints,
       });
 
       if (videoRef.current) {
@@ -108,8 +128,7 @@ export default function HomePage() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            ...videoConstraints,
             facingMode: { ideal: facingMode },
           },
         });
@@ -123,10 +142,15 @@ export default function HomePage() {
 
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
+            video: isMobile
+              ? {
+                  width: { ideal: 1280, max: 1920 },
+                  height: { ideal: 720, max: 1080 },
+                }
+              : {
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                },
           });
 
           if (videoRef.current) {
@@ -196,11 +220,14 @@ export default function HomePage() {
         return;
       }
 
+      // Adjust input size for mobile devices
+      const inputSize = isMobile ? 320 : 416;
+
       const detection = await window.faceapi
         .detectSingleFace(
           video,
           new window.faceapi.TinyFaceDetectorOptions({
-            inputSize: 416,
+            inputSize: inputSize,
             scoreThreshold: 0.3,
           })
         )
@@ -277,13 +304,15 @@ export default function HomePage() {
 
     const box = resizedDetection.detection.box;
     ctx.strokeStyle = label !== "Unknown" ? "#a3e635" : "#ef4444";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = isMobile ? 2 : 3;
     ctx.strokeRect(box.x, box.y, box.width, box.height);
 
     ctx.fillStyle = label !== "Unknown" ? "#a3e635" : "#ef4444";
-    ctx.font = "bold 20px Arial";
+    const fontSize = isMobile ? 16 : 20;
+    ctx.font = `bold ${fontSize}px Arial`;
     const textWidth = ctx.measureText(label).width;
-    ctx.fillRect(box.x, box.y - 35, textWidth + 20, 35);
+    const labelHeight = isMobile ? 30 : 35;
+    ctx.fillRect(box.x, box.y - labelHeight, textWidth + 20, labelHeight);
     ctx.fillStyle = "black";
     ctx.fillText(label, box.x + 10, box.y - 10);
   };
@@ -353,7 +382,7 @@ export default function HomePage() {
     return () => {
       stopCamera();
     };
-  }, [isCameraActive, isAuthenticated, cameraFacingMode]);
+  }, [isCameraActive, isAuthenticated, cameraFacingMode, isMobile]);
 
   useEffect(() => {
     if (
@@ -365,9 +394,12 @@ export default function HomePage() {
     ) {
       lastDetectionTimeRef.current = Date.now();
 
+      // Adjust detection interval for mobile
+      const detectionInterval = isMobile ? 700 : 500;
+
       detectionIntervalRef.current = setInterval(() => {
         recognizeFace();
-      }, 500);
+      }, detectionInterval);
     }
 
     return () => {
@@ -384,6 +416,7 @@ export default function HomePage() {
     registeredUsers.length,
     isSwitchingCamera,
     isAuthenticated,
+    isMobile,
   ]);
 
   if (loading || checkingAuth) {
@@ -440,7 +473,12 @@ export default function HomePage() {
         <div className="flex-1 overflow-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-stone-950 border border-neutral-800 rounded-2xl overflow-hidden mb-6 md:mb-8 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
-              <div className="relative bg-black flex items-center justify-center aspect-video">
+              {/* Mobile: 4:3 aspect ratio, Desktop: 16:9 aspect ratio */}
+              <div
+                className={`relative bg-black flex items-center justify-center ${
+                  isMobile ? "aspect-[4/3]" : "aspect-video"
+                }`}
+              >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_60%,rgba(0,0,0,0.7)_100%)]" />
 
                 {isCameraActive && isAuthenticated ? (
@@ -549,7 +587,7 @@ export default function HomePage() {
 
               {/* Control bar */}
               <div className="p-4 md:p-5 bg-black/70 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items(center gap-2 text-xs md:text-sm text-neutral-400">
+                <div className="flex items-center gap-2 text-xs md:text-sm text-neutral-400">
                   <div
                     className={`w-2 h-2 rounded-full ${
                       isCameraActive && isAuthenticated
