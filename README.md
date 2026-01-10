@@ -1,6 +1,9 @@
 # Face Recognition System
 
 A web-based face recognition system that identifies and tracks individuals using real-time camera feed. The system stores facial data in a database and provides instant recognition when a person appears on camera.
+<p align="center">
+  <img src="landing_page.jfif" alt="FaceID Assistant Landing Page" width="600">
+</p>
 
 ## Features
 
